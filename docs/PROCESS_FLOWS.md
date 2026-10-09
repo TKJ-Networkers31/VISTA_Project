@@ -1,67 +1,106 @@
 # Process Flows
 
-All flows below are **planned** unless the roadmap says otherwise.
+All flows are **planned** unless the roadmap evidence says otherwise.
 
-## 1. Image upload and analysis
+## 1. Image ingestion
 ```mermaid
 sequenceDiagram
-  participant U as User
-  participant W as Web UI
+  participant C as Client
   participant A as API
-  participant P as Pipeline
-  U->>W: Select image
-  W->>A: POST /v1/analyze
-  A->>A: Validate type, size, pixels
-  A->>P: Decoded image
-  P->>P: OCR and detection
-  P-->>A: Normalized result
-  A-->>W: JSON response
-  W-->>U: Overlay and lists
+  participant V as Validator
+  participant Q as Task queue
+  C->>A: POST /v1/analyze
+  A->>V: Check type, bytes, dimensions, pixels
+  alt invalid
+    V-->>A: invalid_input
+    A-->>C: Error envelope
+  else valid
+    V->>Q: Enqueue (bounded)
+    alt queue full
+      Q-->>A: rejected
+      A-->>C: resource_limit error
+    else accepted
+      Q-->>A: Task accepted
+    end
+  end
 ```
 
 ## 2. OCR
 ```mermaid
 flowchart TD
-  I[Decoded image] --> PRE[Preprocess] --> OCR[OCR provider] --> NORM[Normalize text, confidence, bbox] --> OUT[OcrResult]
-  OCR -->|error| ERR[status failed with error code]
+  I[Decoded image] --> R{Provider available?}
+  R -->|no| U[status unavailable]
+  R -->|yes| P[Lazy-load model, run with timeout]
+  P --> N[Normalize: text, confidence or null, bbox2d]
+  P -->|error| E[Provider error in envelope]
+  N --> OUT[OCR result]
 ```
-Confidence is `null` if the provider gives none. Text is untrusted content (see prompt-injection notes in security doc).
 
-## 3. Object detection
+## 3. Object detection (Phase 3)
 ```mermaid
 flowchart TD
-  I[Decoded image] --> PRE[Resize for model] --> DET[Detector] --> MAP[Map boxes to original pixels] --> NORM[Normalize label, confidence, bbox] --> OUT[DetectionResult]
-  DET -->|error| ERR[status failed]
+  I[Decoded image] --> R{Detector available?}
+  R -->|no| U[status unavailable]
+  R -->|yes| P[Resize, infer with timeout]
+  P --> M[Map boxes back to original pixels]
+  M --> N[Normalize: label, confidence or null, bbox2d]
+  P -->|error| E[Provider error]
 ```
 
-## 4. Real-time camera (Phase 6)
-```mermaid
-flowchart LR
-  CAM[Camera] --> CAP[Frame capture] --> Q[Bounded queue, drop oldest] --> INF[Inference] --> TRK[Tracking] --> ST[Scene state] --> UI[Overlay]
-```
-
-## 5. Voice to AI to speech (Phase 7)
-```mermaid
-flowchart LR
-  MIC[Voice input] --> STT[Speech-to-text] --> ASSOC[Target association from scene state] --> LLM[LLM] --> OUT[Text, TTS, or info panel]
-```
-Runs in parallel with flow 4; vision never waits for the LLM.
-
-## 6. Spatial tracking and AR/MR (Phases 8–9)
-```mermaid
-flowchart LR
-  POSE[Pose, tracking, depth] --> TF[Coordinate transform] --> TGT[Validated spatial target] --> ANC[Spatial anchor] --> PANEL[AR/MR panel]
-```
-If any input is missing the result is `spatial.status = "unavailable"`; 2D boxes are never promoted to 3D.
-
-## 7. Error handling and fallback
+## 4. External AI request (Phase 4)
 ```mermaid
 flowchart TD
-  REQ[Request] --> VAL{Valid?}
-  VAL -->|no| E1[Structured 4xx error]
-  VAL -->|yes| RUN[Run capabilities]
-  RUN --> OK{All ok?}
-  OK -->|yes| R200[200 full result]
-  OK -->|partial| R200P[200 with per-capability failed status]
-  OK -->|all failed| E5[Structured 5xx error]
+  T[Task] --> POL{Policy permits external?}
+  POL -->|no| LOC[Local or unavailable]
+  POL -->|yes| CONS{Consent and credentials configured?}
+  CONS -->|no| LOC
+  CONS -->|yes| BUD{Within cost/quota limits?}
+  BUD -->|no| ERR[quota_exceeded]
+  BUD -->|yes| CALL[Call adapter with timeout]
+  CALL -->|ok| OK[Normalize result]
+  CALL -->|fail| RET{Retries left?}
+  RET -->|yes| CALL
+  RET -->|no| FB[Fallback or provider error]
+```
+
+## 5. Live camera (Phase 5)
+```mermaid
+flowchart LR
+  CAM[Camera] --> S[Frame sampler] --> BQ[Bounded queue: drop oldest] --> INF[Inference worker] --> SC[Scene state] --> UI[Overlay]
+  UI -->|cancel| INF
+```
+Capture and sampling never wait for external AI.
+
+## 6. Voice request (Phase 6)
+```mermaid
+flowchart LR
+  MIC[Audio] --> STT[STT provider] --> INT[Intent routing] --> CTX[Scene context lookup] --> LLM[LLM provider] --> OUT[Text and optional TTS]
+```
+Runs on a separate path from the vision loop.
+
+## 7. Provider failure
+```mermaid
+flowchart TD
+  F[Provider error] --> K{Retryable and budget left?}
+  K -->|yes| R[Retry with backoff, bounded]
+  K -->|no| FB{Fallback allowed by policy?}
+  FB -->|yes| ALT[Try next provider]
+  FB -->|no| ST[Capability status failed or unavailable]
+  R --> F
+```
+
+## 8. Cancellation
+```mermaid
+flowchart TD
+  X[Cancel request or client disconnect] --> Q{Task state}
+  Q -->|queued| RM[Remove from queue: cancelled]
+  Q -->|running| SIG[Set cancel flag, stop at next checkpoint or timeout]
+  SIG --> CL[Release resources, cleanup temp files]
+```
+
+## 9. Future spatial processing (Phase 8+)
+```mermaid
+flowchart LR
+  P[Valid pose, tracking, depth] --> T[Coordinate transform] --> V[Validated spatial target] --> A[Spatial anchor] --> PN[AR/MR panel]
+  P -.->|any input missing| U[spatial not_implemented or unavailable]
 ```

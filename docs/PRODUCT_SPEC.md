@@ -1,39 +1,47 @@
 # Product Specification
 
-## Functional requirements (MVP = Phases 1–5)
+Labels: **[Decision]**, **[Proposal]**, **[Assumption]**, **[Open]**.
+
+## MVP (Phases 1–2)
+1. Upload an image.
+2. Validate the image (type, bytes, dimensions, pixels).
+3. Run OCR with a **local** provider.
+4. Return extracted text, confidence when the provider supplies it, and `bbox2d`.
+5. Display results in a web interface.
+6. Report errors and processing status honestly.
+
+Object detection is **not** in the MVP (moved to Phase 3; this supersedes the v0.1 draft).
+
+## Functional requirements (MVP)
 | ID | Requirement |
 |---|---|
-| FR-1 | `GET /health` reports service status and capability availability. |
-| FR-2 | `POST /v1/analyze` accepts one image and returns the analysis contract ([DATA_CONTRACTS.md](DATA_CONTRACTS.md)). |
-| FR-3 | OCR returns text, optional confidence, 2D bbox in original pixel coordinates. |
-| FR-4 | Detection returns label, optional confidence, 2D bbox in original pixel coordinates. |
-| FR-5 | Each request gets a unique `request_id`. |
-| FR-6 | Validation errors return structured error responses. |
-| FR-7 | Web UI uploads or captures an image and renders overlays and result lists. |
-| FR-8 | `spatial` capability always reports `unavailable` in MVP. |
+| FR-1 | `GET /health` returns service status and capability registry. |
+| FR-2 | `POST /v1/analyze` accepts one image and returns the result envelope ([DATA_CONTRACTS.md](DATA_CONTRACTS.md)). |
+| FR-3 | OCR items: `text`, `confidence` (nullable), `bbox2d` in original image pixels. |
+| FR-4 | Every response has `schema_version`, `request_id`, `status`. |
+| FR-5 | Validation and provider failures return structured errors ([ERROR_HANDLING.md](ERROR_HANDLING.md)). |
+| FR-6 | Web UI uploads an image, shows status, overlay boxes, and text list. |
+| FR-7 | Unsupported capabilities (detection, spatial, voice) report `not_implemented`/`unavailable`, never simulated output. |
 
 ## Non-functional requirements
-- Performance: targets are set after benchmarking; initial goal is "usable on the reference laptop" [Assumption].
-- Memory: stay within 8 GB shared with OS and browser; load models lazily.
-- Security/privacy: see [SECURITY_AND_PRIVACY.md](SECURITY_AND_PRIVACY.md).
-- Maintainability: module boundaries per [ARCHITECTURE.md](ARCHITECTURE.md).
-- Configurability: limits via environment (`.env.example`).
+Resource limits per [RESOURCE_BUDGET.md](RESOURCE_BUDGET.md); security per [SECURITY_AND_PRIVACY.md](SECURITY_AND_PRIVACY.md); no network, API key, GPU, or downloaded model required for normal test runs ([TEST_STRATEGY.md](TEST_STRATEGY.md)).
 
 ## User journeys
-1. **Upload and read:** user opens page → selects image → sees extracted text boxes and object boxes → copies text.
-2. **Bad file:** user uploads a 200 MB file → clear rejection message citing the configured limit.
-3. **Partial failure:** OCR provider fails → detections still shown, OCR status `failed` with an error code.
+1. Upload image → see text boxes → copy text.
+2. Upload oversized/invalid file → clear rejection citing configured limit.
+3. OCR provider not installed → response status `unavailable` with explanation; no fake text.
 
-## MVP scope
-Single-image analysis, OCR, detection, responsive web UI, tests, documentation.
+## Later milestones (not MVP)
+Detection (Phase 3), hybrid providers and image understanding (4), live camera (5), voice (6), tracking (7), spatial (8), Android/XR (9). See [ROADMAP.md](ROADMAP.md).
 
 ## Out of scope for MVP
-Live camera, voice, LLM answers, tracking, depth, 3D coordinates, AR/MR/XR, user accounts, cloud deployment, model training.
+Detection, live camera, voice, LLM, tracking, depth/pose, AR/MR/XR, accounts, cloud deployment, training.
 
 ## Acceptance criteria (testable)
-- AC-1: Health endpoint returns HTTP 200 with JSON containing `status` and `capabilities`.
-- AC-2: A fixture image with known printed text yields OCR output containing that text (match tolerance defined in tests).
-- AC-3: Non-image file, oversized file, and over-pixel-limit image each return the documented error code and HTTP status.
-- AC-4: All responses validate against the published JSON schema.
-- AC-5: After a request, no raw image remains on disk unless retention is explicitly enabled.
-- AC-6: Responses never contain spatial coordinates when `spatial.status != "available"`.
+- AC-1: `/health` returns 200 with `status` and `capabilities`.
+- AC-2: With a mock OCR provider, `/v1/analyze` returns the documented envelope (deterministic test).
+- AC-3: Invalid type, oversize bytes, over-limit pixels each return their documented error code/status.
+- AC-4: Every response validates against the JSON Schema.
+- AC-5: No raw image remains on disk after a request unless retention is enabled.
+- AC-6: `spatial` is never populated; status is `not_implemented`.
+- AC-7 (Phase 2): local OCR on a fixture returns the expected text within a defined tolerance, measured on the reference laptop.

@@ -19,3 +19,10 @@
 - **Provider:** A swappable implementation behind a capability interface.
 - **Modular monolith:** One deployable application with strict internal module boundaries.
 - **ADR:** Architecture Decision Record.
+- **Capability registry:** Runtime list of capabilities and their status (`available`, `unavailable`, `not_implemented`, `disabled`, `failed`).
+- **Provider adapter:** Implementation of the provider interface for a specific local or external engine.
+- **Backpressure:** Rejecting or dropping work when queues are full instead of buffering without bound.
+- **Frame sampling:** Processing only a subset of camera frames.
+- **Policy (`local_only`, `hybrid`, `external_fallback`):** Rule deciding whether external services may be used.
+- **Track ID:** Identifier for an object followed across frames.
+- **Honest degradation:** Reporting unavailable/failed status instead of fabricating output.

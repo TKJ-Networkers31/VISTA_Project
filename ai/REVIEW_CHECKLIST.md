@@ -11,3 +11,7 @@
 - [ ] No claims of unimplemented features; docs and CHANGELOG updated.
 - [ ] No destructive Git actions occurred.
 - [ ] Privacy: no raw image retention or content logging added.
+- [ ] Queues, buffers, and model residency stay bounded; timeouts and cancellation present.
+- [ ] External calls only through provider adapters and the configured policy; no secrets in code or logs.
+- [ ] Unsupported capabilities report honest status; no simulated spatial data.
+- [ ] Normal tests need no network, keys, model weights, or GPU.

@@ -1,35 +1,37 @@
 # File Tree
 
-Legend: **[v0.1]** exists now · **[MVP]** created in Phases 1–5 · **[Future]** later phases. Files are created only when needed; no empty placeholder code files.
+Legend: **[exists]** present now · **[phase N]** created when that phase begins. Only useful files are created; no speculative modules.
 
 ```text
 VISTA/
-├── README.md, LICENSE_DECISION.md, CHANGELOG.md, SECURITY.md      [v0.1]
-├── CODE_OF_CONDUCT.md, CONTRIBUTING.md, GITHUB_SETUP.md           [v0.1]
-├── .gitignore, .env.example, pyproject.toml                        [v0.1]
-├── LICENSE                         awaiting owner decision        [Future]
-├── docs/                           documentation                   [v0.1]
-│   └── ADR/                        decision records                [v0.1]
-├── ai/                             AI agent rules and templates    [v0.1]
+├── README.md, CHANGELOG.md, CONTRIBUTING.md, SECURITY.md,
+│   CODE_OF_CONDUCT.md, LICENSE_DECISION.md, GITHUB_SETUP.md      [exists]
+├── .gitignore, .env.example, pyproject.toml, requirements-dev.txt [exists]
+├── LICENSE                                   awaiting owner decision
+├── docs/                                                         [exists]
+│   ├── PROJECT_OVERVIEW, PRODUCT_SPEC, ARCHITECTURE, PROCESS_FLOWS, ROADMAP
+│   ├── FILE_TREE, DATA_CONTRACTS, SECURITY_AND_PRIVACY, TEST_STRATEGY, TECH_STACK
+│   ├── DEVELOPMENT_WORKFLOW, RESOURCE_BUDGET, WINDOWS_SETUP, CONFIGURATION
+│   ├── ERROR_HANDLING, OBSERVABILITY, SPATIAL_COMPUTING_PLAN
+│   ├── API_PROVIDER_POLICY, PLANNING_NOTES, GLOSSARY   (all .md)
+│   └── ADR/  README, ADR-0001, ADR-0002, ADR-0003
+├── ai/  AI_WORKING_RULES, PROMPT_TEMPLATES, TASK_TEMPLATE,
+│        REVIEW_CHECKLIST, DECISION_LOG                            [exists]
 ├── apps/
-│   ├── api/                        FastAPI app, routes, error mapping   [MVP, Phase 1+]
-│   └── web/                        static HTML/CSS/JS UI                [MVP, Phase 4]
+│   ├── api/       README.md [exists]; code in phase 1
+│   └── web/       README.md [exists]; code in phase 2 (Android client later, phase 9)
 ├── core/
-│   ├── contracts/                  schemas and shared types             [MVP, Phase 1–2]
-│   ├── pipeline/                   analysis orchestrator                [MVP, Phase 2]
-│   ├── vision/                     decode, preprocess, detection        [MVP, Phase 2–3]
-│   ├── ocr/                        OCR provider                         [MVP, Phase 2]
-│   ├── spatial/                    transforms, pose, anchors            [Future, Phase 8]
-│   └── storage/                    temp files, optional persistence     [MVP, Phase 2]
-├── configs/                        non-secret config files              [MVP, when needed]
-├── tests/
-│   ├── unit/                       [MVP]
-│   ├── integration/                [MVP]
-│   └── fixtures/                   small synthetic/own images only      [MVP]
-└── scripts/                        dev helper scripts                   [when needed]
+│   ├── contracts/      README.md [exists]; schemas phase 1
+│   ├── orchestration/  README.md [exists]; registry/queue phase 1
+│   ├── vision/         README.md [exists]; decode/preprocess phase 1–2, detection phase 3
+│   ├── ocr/            README.md [exists]; provider phase 2
+│   ├── providers/      README.md [exists]; interface + mocks phase 1, adapters phase 4
+│   ├── voice/          README.md [exists]; phase 6
+│   ├── spatial/        README.md [exists]; phase 8
+│   └── storage/        README.md [exists]; temp files phase 1–2
+├── configs/       README.md [exists]
+├── tests/         README.md [exists]; unit/integration/fixtures created with first tests
+└── scripts/       README.md [exists]
 ```
 
-Directories under `apps/`, `core/`, `configs/`, `tests/`, `scripts/` are **not** created in v0.1 (Git does not track empty directories, and empty stubs add no value). Create each with its first real file.
-
-## Responsibilities
-See [ARCHITECTURE.md](ARCHITECTURE.md) for dependency rules. Tests mirror module paths. Fixtures must be free of personal data and licensed for the repo.
+Each planned directory currently contains only a `README.md` stating its purpose and boundary (no Python files). Other docs and the README link here for the layout of record; any change to structure requires updating this file in the same change.

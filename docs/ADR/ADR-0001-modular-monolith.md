@@ -4,7 +4,7 @@
 - **Date:** Phase 0
 
 ## Context
-Single developer, limited hardware (8 GB RAM), early uncertainty about engines, and a need for fast iteration.
+Single developer, limited hardware (ThinkPad X270, 8 GB RAM, CPU-only assumption), early uncertainty about engines, and a need for fast iteration.
 
 ## Decision
 Build one deployable Python application with enforced internal module boundaries ([ARCHITECTURE.md](../ARCHITECTURE.md)).

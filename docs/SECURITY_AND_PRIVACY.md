@@ -1,37 +1,39 @@
 # Security and Privacy
 
-Status: design requirements for future code. Nothing here is implemented yet.
+Status: design requirements for future code; nothing here is implemented yet.
 
-## File upload validation
-- Allow-list of types (default JPEG, PNG, WebP). Verify by decoding, not by extension or client MIME alone.
-- Reject truncated/corrupt images; strip or ignore metadata (EXIF) and do not log it.
+## Secrets and `.env`
+Secrets only in private `.env`/OS environment (git-ignored). `.env.example` contains no real values. Never log or echo secret values; config errors name the variable, not its value. Credential checks in the repo must not print values.
 
-## Limits
-Configurable (see `.env.example`): max bytes, max side, **max total pixels** (decompression-bomb defense; set the decoder's pixel cap and check dimensions before full decode). Do not promise unlimited size.
+## Image and document validation
+Allow-list of types; verify by decoding, not extension or client MIME alone. Reject corrupt/truncated files. Enforce bytes, side, and **total pixel** limits before full decode (decompression-bomb defense). Ignore/strip metadata and do not log it.
 
-## Temporary files
-Prefer in-memory handling. If files are needed, use a private temp dir, random names, and delete in `finally`. Never use client-supplied filenames for paths.
+## Path traversal
+Never use client-supplied names for paths. Generate random names inside a private temp directory; resolve and verify paths stay inside it.
+
+## Archive extraction (future only)
+Not planned. If added: guard against zip-slip, zip bombs (ratio and total-size caps), symlinks, nested archives, and extract into an isolated temp dir with entry-count limits.
 
 ## Resource exhaustion
-Bound concurrency, queue depth, request time, and model memory. Reject early. Live mode drops stale frames instead of queueing.
+Bounded queue and workers, timeouts, early rejection, per-IP rate limiting where exposed beyond localhost, bounded frame queues in live mode ([RESOURCE_BUDGET.md](RESOURCE_BUDGET.md)).
+
+## API authentication and rate limiting
+Localhost-only default needs no auth. Before any LAN or remote exposure: require an authentication token and rate limiting; document the exposure. **[Open]** exact mechanism chosen in Phase 5 (before live-camera LAN use) at the latest.
 
 ## Local network exposure
-Bind to `127.0.0.1` by default. LAN access (needed for phone testing) is an explicit opt-in; document that it exposes the service to the network and add authentication or a trusted-network warning before enabling.
+Bind `127.0.0.1` by default. LAN (e.g. for phone testing) is an explicit opt-in with a documented warning, firewall guidance, and auth.
 
-## Raw image retention
-Default `false`. Retention requires explicit config and is documented per feature.
+## Logging and redaction
+Log metadata only (see [OBSERVABILITY.md](OBSERVABILITY.md)); redact content and secrets by default.
 
-## Secrets
-Only in `.env` (git-ignored). `.env.example` has no real values. Never log secrets.
+## External data transmission
+Off by default. Requires explicit configuration and policy ([API_PROVIDER_POLICY.md](API_PROVIDER_POLICY.md)); transmissions are visible as metadata. Images, audio, documents, and extracted text are never sent without that consent.
 
-## OCR prompt injection
-Text recovered by OCR is **untrusted data**. When passed to an LLM (Phase 7) it is delimited as data, never merged into instructions; the LLM has no tool access that could act on it.
+## OCR text and prompt injection
+OCR output is untrusted data. When given to an LLM it is delimited as data, and the LLM has no tool permissions that could act on it.
 
-## Logging privacy
-Log request IDs, status, durations, and error codes. Do not log image bytes, OCR text, or detected content by default.
+## Temporary files, retention, deletion
+Prefer in-memory processing; otherwise private temp dir deleted in `finally`. Raw images and audio are not retained by default (`VISTA_RETAIN_RAW_IMAGES=false`). If retention is ever enabled, document duration and provide deletion.
 
-## Archive extraction (future, if ever)
-Not planned. If considered: guard against zip-slip path traversal, zip bombs (ratio and total-size caps), symlinks, and nested archives; extract to an isolated temp dir.
-
-## Third-party providers
-Cloud STT/LLM/OCR would send user data off-device. Requires explicit opt-in and an ADR.
+## Dependencies and vulnerability reporting
+Add dependencies deliberately; check licenses; review updates regularly (e.g. dependency audit tooling once chosen). Vulnerabilities are reported per [../SECURITY.md](../SECURITY.md).

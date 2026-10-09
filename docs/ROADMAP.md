@@ -1,113 +1,113 @@
 # Roadmap
 
-Time estimates are intentionally omitted; any future estimate must be marked as a preliminary guess. Each phase must meet its exit condition before the next starts.
+No phase is complete without evidence (test output, measurements, or review notes) attached to the change. Any time estimate must be marked as a preliminary guess; none are given here. Phase order follows the v0.2 master prompt and supersedes the v0.1 numbering.
 
-## Phase 0: Planning and repository foundation
+## Phase 0 — Repository foundation, requirements, architecture, contracts, and Windows setup
 
-- **Goal:** Documentation baseline and repo hygiene.
-- **Features:** Docs, AI rules, root files.
+- **Goals:** Establish docs, contracts, rules, config.
 - **Dependencies:** None.
-- **Output:** This documentation set.
-- **Acceptance criteria:** All docs exist, links resolve, Mermaid and JSON validated, owner reviews open questions.
-- **Risks:** Scope drift; docs inconsistent.
-- **Condition to proceed:** Owner accepts v0.1 and records decisions in the decision log.
+- **Deliverables:** Documentation set, AI rules, root config, planned directory READMEs.
+- **Acceptance criteria:** Links resolve; Mermaid/JSON/TOML validated; open decisions listed.
+- **Tests:** Link/syntax validation only; no application tests exist.
+- **Risks:** Documents drift or contradict.
+- **Exit conditions:** Owner reviews v0.2 and records decisions in `ai/DECISION_LOG.md`.
 
-## Phase 1: Backend skeleton and health endpoint
+## Phase 1 — Minimal API and image ingestion
 
-- **Goal:** Minimal FastAPI app bootstrap (not OCR/vision).
-- **Features:** `GET /health`, config loading, error format, logging without image data.
-- **Dependencies:** Phase 0; verified Python/FastAPI versions.
-- **Output:** Runnable app, pinned dependencies, first tests.
-- **Acceptance criteria:** Health returns 200; config limits load from env; tests pass in a real run.
-- **Risks:** Dependency incompatibility on Windows.
-- **Condition to proceed:** Tests pass; dependency versions recorded.
+- **Goals:** Bootstrap app, `/health`, capability registry, config, upload validation, error envelope.
+- **Dependencies:** Phase 0; Python version and FastAPI compatibility verified on the X270.
+- **Deliverables:** App skeleton, validation, JSON Schemas, mock provider.
+- **Acceptance criteria:** AC-1, AC-3, AC-4, AC-5 in PRODUCT_SPEC.
+- **Tests:** Unit, API, contract, security (limits) tests using mocks; no network/models.
+- **Risks:** Windows dependency issues; limits set too loose.
+- **Exit conditions:** Tests actually run and pass; dependency versions recorded; evidence attached to the PR.
 
-## Phase 2: Image intake and OCR
+## Phase 2 — OCR MVP with a local implementation and deterministic tests
 
-- **Goal:** Safe upload, decoding, OCR provider behind interface.
-- **Features:** `POST /v1/analyze` with OCR; validation limits.
-- **Dependencies:** Phase 1; OCR engine verified to install and run on target hardware.
-- **Output:** OCR results in the data contract.
-- **Acceptance criteria:** Fixture text recovered; invalid inputs rejected; memory measured.
-- **Risks:** OCR install size/RAM too high; accuracy on real photos.
-- **Condition to proceed:** Measured latency and RAM acceptable to owner, or alternative engine chosen via ADR.
+- **Goals:** Local OCR behind the provider interface; web UI for upload/overlay.
+- **Dependencies:** Phase 1; local OCR engine verified to install and run on target hardware.
+- **Deliverables:** OCR provider, fixtures, web page, measured latency/RAM.
+- **Acceptance criteria:** AC-2, AC-6, AC-7.
+- **Tests:** Mock-provider tests (deterministic) plus an optional marked test using the real engine and fixtures.
+- **Risks:** OCR install size/RAM on 8 GB; accuracy on real photos.
+- **Exit conditions:** Measured resource use acceptable to owner or alternative chosen via ADR; MVP review.
 
-## Phase 3: Object detection
+## Phase 3 — Object detection with a lightweight model and measured resource use
 
-- **Goal:** Detector behind interface, normalized output.
-- **Features:** Detection in the same response.
-- **Dependencies:** Phase 2; detector model and license verified.
-- **Output:** Detection results, partial-failure handling.
-- **Acceptance criteria:** Boxes map to original pixels; contract tests pass.
+- **Goals:** Detection provider, normalized output, resource measurement.
+- **Dependencies:** Phase 2; model and license verified.
+- **Deliverables:** Detector provider, contract update, benchmark notes (measured).
+- **Acceptance criteria:** Boxes correct in original pixel space; coexistence with OCR within RAM budget (one heavy model resident by default).
+- **Tests:** Contract, integration (mock), optional real-model test, benchmark run.
 - **Risks:** CPU latency; model license.
-- **Condition to proceed:** Latency measured; license confirmed.
+- **Exit conditions:** Measured numbers recorded in RESOURCE_BUDGET.md; license confirmed.
 
-## Phase 4: Responsive web interface
+## Phase 4 — Hybrid provider adapters and image understanding
 
-- **Goal:** Browser UI for upload and overlays.
-- **Features:** Upload/capture, canvas overlay, result lists, error display.
-- **Dependencies:** Phases 2–3 API stable.
-- **Output:** `apps/web` static UI.
-- **Acceptance criteria:** Works on laptop and Android browser; overlay boxes align.
-- **Risks:** Mobile layout, coordinate scaling bugs.
-- **Condition to proceed:** Manual and UI tests pass on both clients.
+- **Goals:** External adapters, routing policies, cost/retry limits, consent gating.
+- **Dependencies:** Phase 3; provider choice decided via ADR.
+- **Deliverables:** Adapter interface implementations, policy router, image-understanding capability.
+- **Acceptance criteria:** Policies `local_only`/`hybrid`/`external_fallback` behave as documented; no data leaves without consent; retries bounded.
+- **Tests:** Provider-adapter tests with mocks/fakes (no keys or network); security tests for consent and redaction.
+- **Risks:** Cost, privacy, quota errors, provider drift.
+- **Exit conditions:** Policy tests pass; data-transmission visibility implemented.
 
-## Phase 5: Integration, security, testing, MVP release
+## Phase 5 — Live camera, sampled frames, backpressure, and cancellation
 
-- **Goal:** Hardening and release.
-- **Features:** Limits, temp-file cleanup, schema validation, docs sync.
-- **Dependencies:** Phases 1–4.
-- **Output:** MVP tag, honest status in README.
-- **Acceptance criteria:** All acceptance criteria in PRODUCT_SPEC pass; security checklist complete.
-- **Risks:** Hidden resource exhaustion paths.
-- **Condition to proceed:** Owner signs off MVP.
+- **Goals:** Frame sampling, bounded queue, drop policy, cancellation.
+- **Dependencies:** Phase 3 benchmarks; browser camera access plan.
+- **Deliverables:** Live prototype with bounded memory.
+- **Acceptance criteria:** Memory stays bounded under sustained load; cancellation works; camera loop never blocks on external AI.
+- **Tests:** Queue/backpressure unit tests; soak test with reported measurements.
+- **Risks:** CPU too slow; HTTPS requirement for phone camera access.
+- **Exit conditions:** Measured sustainable frame rate recorded.
 
-## Phase 6: Live camera prototype
+## Phase 6 — Voice interaction, STT, intent routing, and TTS
 
-- **Goal:** Near-real-time analysis from camera.
-- **Features:** Frame capture, bounded queue, overlay, tracking basics.
-- **Dependencies:** MVP; measured per-frame cost.
-- **Output:** Live prototype.
-- **Acceptance criteria:** Stable under load with dropped frames, no unbounded memory growth.
-- **Risks:** CPU too slow on i7-7th gen; browser camera permissions over HTTP.
-- **Condition to proceed:** Measured frame rate acceptable; HTTPS/local-network approach decided.
+- **Goals:** Voice path in parallel with vision.
+- **Dependencies:** Phases 4–5.
+- **Deliverables:** STT/TTS adapters, intent router, grounded answers.
+- **Acceptance criteria:** Vision loop latency unaffected by LLM/voice activity; audio not retained by default.
+- **Tests:** Adapter and intent tests with mocks; latency comparison measured.
+- **Risks:** Provider cost/privacy; hallucination.
+- **Exit conditions:** Evidence of unaffected vision loop.
 
-## Phase 7: Voice and contextual AI
+## Phase 7 — Object tracking, temporal context, and optional depth/pose capabilities
 
-- **Goal:** Voice question answered from visual context.
-- **Features:** STT, target association, LLM provider, TTS/text.
-- **Dependencies:** Phase 6 scene state; LLM/STT provider choice (open).
-- **Output:** Voice flow independent of vision loop.
-- **Acceptance criteria:** Vision loop latency unchanged while LLM runs; answers grounded in evidence.
-- **Risks:** Cost, privacy of cloud providers, hallucination.
-- **Condition to proceed:** Provider decision recorded in ADR.
+- **Goals:** Tracker, scene state, optional depth/pose as separate providers.
+- **Dependencies:** Phase 5.
+- **Deliverables:** Tracking provider, `track_id` in contracts, capability statuses for depth/pose.
+- **Acceptance criteria:** Track IDs stable on a defined test sequence; depth/pose reported `unavailable` if absent.
+- **Tests:** Tracking tests on synthetic sequences; contract tests.
+- **Risks:** Identity switches; CPU cost.
+- **Exit conditions:** Test sequences pass with recorded metrics.
 
-## Phase 8: Spatial tracking and coordinate systems
+## Phase 8 — Spatial computing architecture and experimental 3D overlays
 
-- **Goal:** Coordinate transforms with real pose/depth.
-- **Features:** Camera-space vs world-space model, transforms, validation.
-- **Dependencies:** Target device with pose/depth source identified.
-- **Output:** Spatial module and contracts update.
-- **Acceptance criteria:** Transforms tested against known synthetic cases; unavailable when inputs missing.
-- **Risks:** No depth/pose on target hardware.
-- **Condition to proceed:** Feasibility study accepted.
+- **Goals:** Coordinate transforms and anchors per ADR-0003.
+- **Dependencies:** Phase 7; real pose/depth source exists on target device.
+- **Deliverables:** Spatial module, validated transforms, experimental overlay.
+- **Acceptance criteria:** Transform tests against synthetic ground truth; capability stays `not_implemented`/`unavailable` without valid sources.
+- **Tests:** Math/unit tests; manual protocol.
+- **Risks:** No depth/pose hardware.
+- **Exit conditions:** Feasibility and validation evidence accepted by owner.
 
-## Phase 9: XR prototype
+## Phase 9 — Android integration and broader AR/MR/XR experimentation
 
-- **Goal:** Panel placement on a supported XR/AR platform.
-- **Features:** Anchored info panel.
-- **Dependencies:** Phase 8; platform chosen (Unity/AR Foundation, WebXR, etc.).
-- **Output:** XR prototype.
-- **Acceptance criteria:** Panel stays anchored in a manual test protocol.
-- **Risks:** Platform fragmentation, device availability.
-- **Condition to proceed:** Owner decides to proceed.
+- **Goals:** Android client and XR experiments.
+- **Dependencies:** Phase 8.
+- **Deliverables:** Android client prototype; XR experiment reports.
+- **Acceptance criteria:** Client uses the same API contract; manual test protocol passes.
+- **Tests:** Contract tests; manual device tests.
+- **Risks:** Platform fragmentation; device availability.
+- **Exit conditions:** Owner decision per experiment.
 
-## Phase 10: Advanced spatial intelligence and future research
+## Phase 10 — Performance optimization, security review, deployment, and product readiness
 
-- **Goal:** Exploratory work.
-- **Features:** Scene understanding, persistent anchors, multi-object reasoning.
-- **Dependencies:** Phase 9.
-- **Output:** Research notes, prototypes.
-- **Acceptance criteria:** Defined per experiment.
-- **Risks:** Scope creep.
-- **Condition to proceed:** Per-experiment review.
+- **Goals:** Optimization, review, packaging.
+- **Dependencies:** Phases 1–9 as relevant.
+- **Deliverables:** Security review report, deployment guide, release.
+- **Acceptance criteria:** All earlier acceptance criteria re-verified; known issues documented.
+- **Tests:** Full test suite, security tests, benchmarks.
+- **Risks:** Hidden resource or security issues.
+- **Exit conditions:** Release sign-off with evidence.

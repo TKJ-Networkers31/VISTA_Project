@@ -17,3 +17,8 @@ Mandatory for every AI coding agent working on VISTA.
 13. Stop and ask a human on architecture conflicts or undecided important decisions.
 14. Do not claim a feature exists unless it is implemented and tested.
 15. Keep 2D bbox, camera-space, and world-space strictly separate.
+16. Inspect the current repository before editing; work on one bounded task at a time; preserve existing interfaces unless the task says otherwise.
+17. Respect resource limits: no unbounded queues or buffers, no loading several large models at once, no heavy inference or model downloads unless the task explicitly requires it.
+18. Never send images, audio, documents, or text to external services without the configured policy; never print or commit secret values.
+19. Unsupported capabilities must return `not_implemented`/`unavailable`, never simulated output.
+20. Disclose limitations and skipped checks in the report.

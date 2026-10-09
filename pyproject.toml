@@ -1,12 +1,26 @@
-# Phase 0 project metadata only. Dependencies are added in Phase 1 after
-# compatibility is verified on the target machine. No versions are pinned yet.
+# Phase 0: project metadata and tool configuration only.
+# No runtime dependencies are declared and no versions are pinned until
+# compatibility is verified on the target machine (Phase 1).
+# Dev tools are listed in requirements-dev.txt.
 [project]
 name = "vista"
 version = "0.0.0"
-description = "VISTA: Visual Intelligence & Spatial Technology Architecture (planning stage)"
+description = "VISTA: Visual Intelligence & Spatial Technology Architecture (foundation stage)"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"   # PROVISIONAL: confirm against the installed Python on the X270
 dependencies = []
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+  "requires_model: needs downloaded model weights (excluded from normal runs)",
+  "requires_network: needs network or API keys (excluded from normal runs)",
+]
+addopts = "-m 'not requires_model and not requires_network'"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]

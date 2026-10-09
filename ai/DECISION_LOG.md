@@ -2,24 +2,24 @@
 
 Do not change entries silently; supersede with a dated new entry.
 
-## Fixed decisions
+## Fixed decisions (from the owner's briefs)
 | ID | Decision | Reason | Consequence |
 |---|---|---|---|
-| D-1 | Project name VISTA; repo name `VISTA` | Project brief | — |
-| D-2 | Python backend | Project brief | Python tooling |
-| D-3 | AI agents must not commit/push/destroy without explicit instruction | Protect owner work | Human performs Git writes |
-| D-4 | Raw images not retained by default | Privacy | Retention is opt-in |
-| D-5 | No fabricated results or benchmarks | Honesty | Real runs only |
+| D-1 | Project name VISTA; repo `VISTA` | Brief | — |
+| D-2 | Python backend; Windows/PowerShell is primary dev environment | Brief | Docker/WSL/GPU/paid API not mandatory |
+| D-3 | AI agents never commit/push/reset/clean without explicit instruction | Protect work | Human performs Git writes |
+| D-4 | Raw images not retained by default | Privacy | Retention opt-in |
+| D-5 | No fabricated results, detections, coordinates, benchmarks | Honesty | Unsupported → `not_implemented`/`unavailable` |
+| D-6 | Modular monolith; hybrid provider-adapter inference; spatial boundaries | v0.2 brief | See ADR-0001/2/3 (ADRs still "Proposed" until owner marks Accepted) |
+| D-7 | MVP = image upload + local OCR only; detection is Phase 3 | v0.2 brief supersedes v0.1 | Roadmap and spec updated |
+| D-8 | Phase order 0–10 as in docs/ROADMAP.md | v0.2 brief supersedes v0.1 numbering | Prompt templates realigned |
+| D-9 | Docs written in technical English | Cross-agent use | — |
 
-## Proposals (not yet accepted)
-| ID | Proposal | Trade-off |
-|---|---|---|
-| P-1 | Modular monolith ([ADR-0001](../docs/ADR/ADR-0001-modular-monolith.md)) | Simplicity vs shared-process RAM |
-| P-2 | FastAPI backend | Familiar/async vs extra dependency |
-| P-3 | Schema version 0.1 per [DATA_CONTRACTS](../docs/DATA_CONTRACTS.md) | Needs validation in Phase 1–2 |
+## Proposals (not accepted)
+FastAPI; schema version 0.2 envelope; provisional limits in `.env.example`; Python 3.11; pytest + ruff dev tooling.
 
 ## Assumptions
-A-1 Reference hardware is i7-7th gen / 8 GB. A-2 PaddleOCR and a small YOLO-family model are installable and fast enough. A-3 Android browser can reach the local server.
+A-1 X270, i7 7th gen, 8 GB RAM, CPU-only (verify on machine). A-2 Local OCR and a small detector are installable and fast enough. A-3 Android browser can reach the local server. A-4 Python 3.11 compatible with chosen libraries.
 
 ## Open questions
-License · OCR languages · XR target device · local vs cloud LLM/STT · security contact.
+License · OCR languages · external provider choice and cost ceiling · XR/Android target · security contact · LAN auth mechanism · resource-pressure thresholds.

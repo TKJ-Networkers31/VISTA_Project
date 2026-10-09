@@ -15,3 +15,5 @@ File name `ADR-NNNN-short-title.md` with: Status (Proposed/Accepted/Superseded),
 
 ## Index
 - [ADR-0001: Modular monolith](ADR-0001-modular-monolith.md)
+- [ADR-0002: Hybrid inference](ADR-0002-hybrid-inference.md)
+- [ADR-0003: Spatial capability boundaries](ADR-0003-spatial-capability-boundaries.md)

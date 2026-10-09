@@ -1,27 +1,28 @@
 # Tech Stack
 
-Nothing here is verified on the target machine yet. Versions are deliberately not pinned. Verify installability, license, and RAM before adopting.
+Nothing is verified on the X270 yet. Versions are not pinned. Verify installability on Windows, license, RAM, and CPU latency before adopting.
 
-## Chosen for MVP direction
+## Selected direction
 | Area | Choice | Status |
 |---|---|---|
-| Language | Python | [Decision] |
-| Backend | FastAPI (+ ASGI server) | [Proposal] |
-| UI | HTML, CSS, JavaScript, responsive | [Proposal] |
-| Tests | pytest | [Proposal] |
+| Language | Python (3.11 preferred; check installed version and compatibility) | [Proposal] |
+| Backend | FastAPI | [Proposal] |
+| Web UI | HTML/CSS/JS, responsive | [Proposal] |
+| Tests/lint | pytest, ruff (dev only) | [Decision for dev tooling] |
 
 ## Candidates
 | Area | Candidate | Alternatives | Trade-offs |
 |---|---|---|---|
-| OCR | PaddleOCR | Tesseract, EasyOCR, RapidOCR | Accuracy vs install size, RAM, Windows compatibility |
-| Detection | Small YOLO-family model | Other lightweight detectors via ONNX | Speed on CPU vs accuracy; **check model license** |
-| Inference runtime | Engine default | ONNX Runtime | Lower dependencies/faster CPU vs conversion effort |
-| Storage | None / SQLite if needed | — | Avoid persisting user data |
-| STT/TTS/LLM | Open (Phase 7) | Local vs cloud | Privacy and cost vs quality |
-| XR | Open (Phase 9) | Unity+AR Foundation, WebXR, RealityKit | Depends on target device |
+| Image processing | OpenCV (or Pillow) | Pillow only | Features vs install size |
+| OCR | PaddleOCR | Tesseract, EasyOCR, RapidOCR | Accuracy vs size/RAM/Windows install |
+| Detection | Lightweight YOLO-family | Other small ONNX detectors | CPU speed vs accuracy; **check model license** |
+| Runtime | Engine default | ONNX Runtime | Fewer deps/faster CPU vs conversion effort |
+| STT/TTS/LLM/Vision | Provider adapters (local or external) | — | Privacy/cost vs capability |
+| Storage | Filesystem temp; SQLite only if needed | — | Avoid persisting user data |
+| Android / XR | Open | AR Foundation, ARCore, WebXR | Depends on device |
 
-## Impact notes (to be measured)
-Deep-learning frameworks are the largest contributors to disk, RAM, and install complexity. Prefer one runtime if possible and lazy-load models.
+## Decision process
+For each pick: shortlist → install test on the X270 → measure RAM/latency on fixtures → license check → record an ADR. No heavy models are downloaded for foundation work.
 
-## Criteria for final choice
-Installs cleanly on Windows; fits RAM budget; acceptable measured latency; license compatible with the owner's chosen license; maintained; swappable behind the provider interface.
+## Impact notes
+Deep-learning frameworks dominate disk, RAM, and install risk; keep one heavy model resident by default; lazy-load; prefer fewer runtimes.
