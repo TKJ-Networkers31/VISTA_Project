@@ -1,3 +1,6 @@
-# Development tools only (versions intentionally unpinned until verified)
+# Development tools only (versions intentionally unpinned; see constraints/ for resolved candidates)
+-r requirements.txt
 pytest
 ruff
+httpx
+psutil

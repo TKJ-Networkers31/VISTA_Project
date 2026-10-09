@@ -1,0 +1,19 @@
+:root { color-scheme: light dark; --b: #8884; --acc: #2563eb; }
+body { font: 16px/1.5 system-ui, sans-serif; margin: 0; }
+main { max-width: 860px; margin: 0 auto; padding: 1rem; }
+h1 small { font-size: .5em; font-weight: 400; opacity: .7; }
+.muted { opacity: .75; font-size: .9em; }
+#drop { display: block; border: 2px dashed var(--b); border-radius: 10px; padding: 2rem 1rem; text-align: center; cursor: pointer; }
+#drop.over { border-color: var(--acc); }
+.row { display: flex; gap: .5rem; align-items: center; margin: .75rem 0; flex-wrap: wrap; }
+button { padding: .5rem 1rem; border-radius: 8px; border: 1px solid var(--b); background: var(--acc); color: #fff; cursor: pointer; }
+button:disabled { opacity: .45; cursor: not-allowed; }
+#clear-btn, #copy-btn { background: transparent; color: inherit; }
+#error { color: #b91c1c; font-weight: 600; }
+#stage { position: relative; display: inline-block; max-width: 100%; }
+#stage img { display: block; max-width: 100%; height: auto; }
+#overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+#overlay rect, #overlay polygon { fill: #2563eb22; stroke: #2563eb; stroke-width: 2; vector-effect: non-scaling-stroke; }
+textarea { width: 100%; box-sizing: border-box; font: inherit; }
+table { width: 100%; border-collapse: collapse; font-size: .9em; display: block; overflow-x: auto; }
+th, td { border-bottom: 1px solid var(--b); padding: .3rem .5rem; text-align: left; }

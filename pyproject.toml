@@ -1,25 +1,25 @@
-# Phase 0: project metadata and tool configuration only.
-# No runtime dependencies are declared and no versions are pinned until
-# compatibility is verified on the target machine (Phase 1).
-# Dev tools are listed in requirements-dev.txt.
 [project]
 name = "vista"
-version = "0.0.0"
-description = "VISTA: Visual Intelligence & Spatial Technology Architecture (foundation stage)"
+version = "0.1.0"
+description = "VISTA: Visual Intelligence & Spatial Technology Architecture (OCR MVP)"
 readme = "README.md"
 requires-python = ">=3.11"   # PROVISIONAL: confirm against the installed Python on the X270
-dependencies = []
+dependencies = ["fastapi", "uvicorn", "pillow", "python-multipart"]   # versions unpinned until verified on the X270
+
+[project.optional-dependencies]
+ocr = ["rapidocr-onnxruntime"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
 markers = [
-  "requires_model: needs downloaded model weights (excluded from normal runs)",
+  "requires_model: needs downloaded model weights or a real OCR engine (excluded from normal runs)",
   "requires_network: needs network or API keys (excluded from normal runs)",
 ]
 addopts = "-m 'not requires_model and not requires_network'"
 
 [tool.ruff]
-line-length = 100
+line-length = 120
 target-version = "py311"
 
 [tool.ruff.lint]

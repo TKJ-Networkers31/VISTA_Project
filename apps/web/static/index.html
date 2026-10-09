@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VISTA – OCR</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main>
+  <h1>VISTA <small>OCR (local)</small></h1>
+  <p id="engine-status" class="muted">Checking engine…</p>
+
+  <label id="drop" for="file-input">
+    <input id="file-input" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+    <span>Click or drop an image here (JPEG, PNG, WebP)</span>
+  </label>
+
+  <div class="row">
+    <button id="run-btn" type="button" disabled>Run OCR</button>
+    <button id="clear-btn" type="button" disabled>Clear</button>
+    <span id="loading" class="muted" hidden>Processing…</span>
+  </div>
+  <p id="error" role="alert" hidden></p>
+  <ul id="warnings" class="muted"></ul>
+
+  <section id="preview-section" hidden>
+    <h2>Image</h2>
+    <div id="stage"><img id="preview" alt="Selected image"><svg id="overlay" preserveAspectRatio="none"></svg></div>
+  </section>
+
+  <section id="result-section" hidden>
+    <h2>Text</h2>
+    <p id="meta" class="muted"></p>
+    <textarea id="text-out" readonly rows="8"></textarea>
+    <div class="row"><button id="copy-btn" type="button">Copy text</button></div>
+    <h2>Blocks</h2>
+    <table id="blocks"><thead><tr><th>Line</th><th>Text</th><th>Confidence</th><th>Box (x1,y1,x2,y2)</th></tr></thead><tbody></tbody></table>
+  </section>
+</main>
+<script src="/static/app.js"></script>
+</body>
+</html>

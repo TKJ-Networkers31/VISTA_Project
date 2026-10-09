@@ -1,0 +1,62 @@
+[
+  {
+    "file": "printed_en.png",
+    "category": "small",
+    "width": 900,
+    "height": 260,
+    "expected_lines": [
+      "Hello VISTA",
+      "Invoice 2026 Total 150"
+    ]
+  },
+  {
+    "file": "printed_id.png",
+    "category": "small",
+    "width": 900,
+    "height": 260,
+    "expected_lines": [
+      "Terima kasih",
+      "Selamat datang di VISTA"
+    ]
+  },
+  {
+    "file": "multiline.png",
+    "category": "medium",
+    "width": 1000,
+    "height": 520,
+    "expected_lines": [
+      "Line one: alpha beta",
+      "Line two: gamma 12345",
+      "Line three: delta",
+      "Line four: END"
+    ]
+  },
+  {
+    "file": "inverted.png",
+    "category": "small",
+    "width": 900,
+    "height": 260,
+    "expected_lines": [
+      "NIGHT MODE",
+      "Contrast 100 percent"
+    ]
+  },
+  {
+    "file": "large_downscale.png",
+    "category": "large",
+    "width": 3000,
+    "height": 2000,
+    "expected_lines": [
+      "Large image",
+      "Downscale test 2026",
+      "VISTA OCR"
+    ]
+  },
+  {
+    "file": "blank.png",
+    "category": "blank",
+    "width": 640,
+    "height": 240,
+    "expected_lines": []
+  }
+]
