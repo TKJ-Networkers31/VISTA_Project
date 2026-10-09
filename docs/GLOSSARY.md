@@ -1,0 +1,21 @@
+# Glossary
+
+- **OCR:** Optical character recognition; extracting text from images.
+- **Computer vision:** Methods for interpreting images and video.
+- **Object detection:** Locating and labeling objects with bounding boxes.
+- **Object tracking:** Maintaining object identity across frames.
+- **Inference:** Running a trained model on input data.
+- **STT / TTS:** Speech-to-text / text-to-speech.
+- **LLM:** Large language model.
+- **Bounding box (bbox):** Rectangle around a region, here `[x_min, y_min, x_max, y_max]` in pixels.
+- **Camera-space:** 3D coordinates relative to the camera.
+- **World-space:** 3D coordinates in a fixed, tracked world frame.
+- **Pose:** Position and orientation of the camera/device.
+- **Depth:** Distance from the camera to scene points.
+- **Coordinate transform:** Mapping between spaces (image → camera → world) using intrinsics, depth, and pose.
+- **Spatial anchor:** A persistent reference tying virtual content to a real-world location.
+- **AR / VR / MR:** Augmented / virtual / mixed reality.
+- **XR:** Umbrella term for AR, VR, and MR.
+- **Provider:** A swappable implementation behind a capability interface.
+- **Modular monolith:** One deployable application with strict internal module boundaries.
+- **ADR:** Architecture Decision Record.

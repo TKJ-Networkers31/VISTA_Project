@@ -1,0 +1,59 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Logs and temp
+*.log
+logs/
+tmp/
+temp/
+*.tmp
+
+# Uploads and local analysis output
+uploads/
+data/
+outputs/
+results/
+
+# Models and caches
+models/
+weights/
+*.pt
+*.pth
+*.onnx
+*.pdparams
+*.ckpt
+*.safetensors
+.paddleocr/
+.cache/
+
+# Local databases
+*.sqlite
+*.sqlite3
+*.db
+
+# Node (if web tooling is added)
+node_modules/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini

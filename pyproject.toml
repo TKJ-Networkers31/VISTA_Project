@@ -1,0 +1,12 @@
+# Phase 0 project metadata only. Dependencies are added in Phase 1 after
+# compatibility is verified on the target machine. No versions are pinned yet.
+[project]
+name = "vista"
+version = "0.0.0"
+description = "VISTA: Visual Intelligence & Spatial Technology Architecture (planning stage)"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
