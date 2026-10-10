@@ -17,3 +17,5 @@ File name `ADR-NNNN-short-title.md` with: Status (Proposed/Accepted/Superseded),
 - [ADR-0001: Modular monolith](ADR-0001-modular-monolith.md)
 - [ADR-0002: Hybrid inference](ADR-0002-hybrid-inference.md)
 - [ADR-0003: Spatial capability boundaries](ADR-0003-spatial-capability-boundaries.md)
+- [ADR-0004: OCR response contract reconciliation](ADR-0004-ocr-response-contract.md) (Proposed)
+- [ADR-0005: Detection backend and shared model residency](ADR-0005-detection-backend-and-model-residency.md) (Proposed)

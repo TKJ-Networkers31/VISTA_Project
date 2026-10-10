@@ -16,10 +16,12 @@ Do not change entries silently; supersede with a dated new entry.
 | D-9 | Docs written in technical English | Cross-agent use | — |
 
 ## Proposals (not accepted)
+2026-10-09 (Phase 3): ADR-0005 — YOLOX-Nano via ONNX Runtime as the detection backend, per-capability contract `0.3-detection`, shared `ModelManager` for OCR + detection (Proposed; owner marks Accepted). Ultralytics YOLO11n/YOLO26n judged AGPL-3.0/Enterprise and not adopted. YOLOX weights license and COCO terms need review. ADR-0004 (response envelope) is still undecided.
+
 FastAPI; schema version 0.2 envelope; provisional limits in `.env.example`; Python 3.11; pytest + ruff dev tooling.
 
 ## Assumptions
 A-1 X270, i7 7th gen, 8 GB RAM, CPU-only (verify on machine). A-2 Local OCR and a small detector are installable and fast enough. A-3 Android browser can reach the local server. A-4 Python 3.11 compatible with chosen libraries.
 
 ## Open questions
-License · OCR languages · external provider choice and cost ceiling · XR/Android target · security contact · LAN auth mechanism · resource-pressure thresholds.
+License (also gates the weights/AGPL question) · Review of YOLOX pretrained-weights and COCO terms · ADR-0004 envelope · OCR languages · external provider choice and cost ceiling · XR/Android target · security contact · LAN auth mechanism · resource-pressure thresholds.

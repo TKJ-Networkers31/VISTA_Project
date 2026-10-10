@@ -15,7 +15,7 @@ Nothing is verified on the X270 yet. Versions are not pinned. Verify installabil
 |---|---|---|---|
 | Image processing | OpenCV (or Pillow) | Pillow only | Features vs install size |
 | OCR | PaddleOCR | Tesseract, EasyOCR, RapidOCR | Accuracy vs size/RAM/Windows install |
-| Detection | Lightweight YOLO-family | Other small ONNX detectors | CPU speed vs accuracy; **check model license** |
+| Detection | **YOLOX-Nano (ONNX Runtime) — implemented in Phase 3, see [ADR-0005](ADR/ADR-0005-detection-backend-and-model-residency.md) (Proposed)** | Ultralytics YOLO11n/YOLO26n (AGPL-3.0/Enterprise, not adopted) | CPU speed vs accuracy; weights license needs owner review |
 | Runtime | Engine default | ONNX Runtime | Fewer deps/faster CPU vs conversion effort |
 | STT/TTS/LLM/Vision | Provider adapters (local or external) | — | Privacy/cost vs capability |
 | Storage | Filesystem temp; SQLite only if needed | — | Avoid persisting user data |

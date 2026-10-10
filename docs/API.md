@@ -1,4 +1,4 @@
-# API (OCR MVP)
+# API (OCR MVP + detection)
 
 Run: `python -m apps.api` (binds `127.0.0.1:8000`). Interactive docs: `/docs`. Web UI: `/`.
 
@@ -7,8 +7,11 @@ Run: `python -m apps.api` (binds `127.0.0.1:8000`). Interactive docs: `/docs`. W
 | GET | `/health` | Service status, OCR capability, queue depth |
 | GET | `/api/v1/ocr/capabilities` | Engine, availability, limits, queue |
 | POST | `/api/v1/ocr` | multipart field `file` (JPEG/PNG/WebP); optional query `include_raw=true` |
+| POST | `/api/v1/detection` | multipart field `file`; optional `confidence`, `max_detections`; see [DETECTION.md](DETECTION.md) |
+| GET | `/api/v1/detection/capabilities` | Detection status (`available`/`unavailable`/`disabled`), model, parameters, limits |
+| GET | `/api/v1/capabilities` | OCR, detection and `spatial` (`not_implemented`) with `implemented` flags; resident models |
 
-Requests to `POST /api/v1/ocr` must carry `Content-Length` (411 otherwise) and are rejected with 413 before parsing if larger than `VISTA_MAX_UPLOAD_BYTES` + 64 KiB.
+Requests to `POST /api/v1/ocr` and `POST /api/v1/detection` must carry `Content-Length` (411 otherwise) and are rejected with 413 before parsing if larger than `VISTA_MAX_UPLOAD_BYTES` + 64 KiB.
 
 ## Response (`schema_version` = `0.2-ocr-mvp`)
 | Field | Type | Notes |
@@ -37,9 +40,13 @@ Requests to `POST /api/v1/ocr` must carry `Content-Length` (411 otherwise) and a
 | UNSUPPORTED_FORMAT | 415 | not JPEG/PNG/WebP (verified by decoding) |
 | QUEUE_FULL | 429 | bounded queue full (`resource_limit`, retryable) |
 | ENGINE_UNAVAILABLE / ENGINE_LOAD_FAILED | 503 | status `unavailable` |
+| MODEL_BUSY | 429 | another model holds the residency slot (OCR and detection share it); retryable |
 | ENGINE_FAILED / INTERNAL_ERROR | 500 | no internal text is exposed |
 | TASK_TIMEOUT | 504 | `VISTA_TASK_TIMEOUT_SECONDS` exceeded; the engine call cannot be interrupted, the slot is freed when it really finishes |
 | CANCELLED | 503 | task stopped before OCR (timeout while queued, or server shutdown) |
 | SERVER_SHUTTING_DOWN | 503 | new work refused during shutdown (`unavailable`, retryable) |
 
 Note: this response shape follows Implementation Prompt 01 and differs from the conceptual envelope in `DATA_CONTRACTS.md` (0.2). Reconcile in an ADR/contract update.
+
+## Detection
+The detection endpoint has its own response contract (`0.3-detection`: `detections[]` with `class_id`, `label`, `confidence`, `bbox2d`), error codes (`DETECTOR_*`, `DETECTION_DISABLED`, `INVALID_PARAMETER`) and example. Full reference: [DETECTION.md](DETECTION.md). The OCR response above is unchanged.

@@ -3,3 +3,5 @@ uvicorn
 pillow
 python-multipart
 rapidocr-onnxruntime
+onnxruntime
+numpy

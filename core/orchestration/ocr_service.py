@@ -6,6 +6,7 @@ import logging
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import nullcontext
 from typing import Optional
 
 from PIL import Image
@@ -13,6 +14,7 @@ from PIL import Image
 from core.config import MIME_TO_FORMAT, Settings
 from core.contracts import ErrorInfo, OCRResponse, VistaError
 from core.ocr.normalize import normalize, raw_to_dicts
+from core.orchestration.model_manager import ModelManager
 from core.providers import OCRProvider
 from core.vision.validation import ImageLimits, decode_image
 
@@ -20,9 +22,10 @@ log = logging.getLogger("vista.ocr")
 
 
 class OCRService:
-    def __init__(self, provider: OCRProvider, settings: Settings) -> None:
+    def __init__(self, provider: OCRProvider, settings: Settings, manager: Optional[ModelManager] = None) -> None:
         self.provider = provider
         self.settings = settings
+        self.manager = manager
         self.limits = ImageLimits(
             max_bytes=settings.max_upload_bytes,
             max_side=settings.max_image_side,
@@ -37,6 +40,9 @@ class OCRService:
         self._inflight = 0
         self._closed = False
         self._active: set = set()  # cancel events of admitted tasks
+        if manager is not None:  # shared residency with other heavy models (see model_manager.py)
+            manager.register("ocr", load=self._load_provider, is_loaded=provider.is_loaded,
+                             unload=getattr(provider, "unload", None))
 
     # -- admission (bounded queue) --
     @property
@@ -72,19 +78,29 @@ class OCRService:
         self._executor.shutdown(wait=False)
 
     # -- engine --
-    def _ensure_loaded(self) -> None:
+    def _check_available(self) -> None:
         ok, reason = self.provider.is_available()
         if not ok:
             raise VistaError("unavailable", "ENGINE_UNAVAILABLE", reason or "OCR engine is not available.")
+
+    def _load_provider(self) -> None:
+        try:
+            self.provider.load()
+        except Exception as exc:  # engine text may contain paths; log type only
+            log.error("engine load failed: %s", type(exc).__name__)
+            raise VistaError("unavailable", "ENGINE_LOAD_FAILED",
+                             "The OCR model could not be loaded. Check the server log.") from None
+
+    def _ensure_loaded(self) -> None:
+        self._check_available()
         with self._load_lock:
             if self.provider.is_loaded():
                 return
-            try:
-                self.provider.load()
-            except Exception as exc:  # engine text may contain paths; log type only
-                log.error("engine load failed: %s", type(exc).__name__)
-                raise VistaError("unavailable", "ENGINE_LOAD_FAILED",
-                                 "The OCR model could not be loaded. Check the server log.") from None
+            self._load_provider()
+
+    def _model_use(self, cancel: threading.Event):
+        """With a shared ModelManager: hold the model loaded and un-evictable while it runs."""
+        return self.manager.use("ocr", cancel) if self.manager is not None else nullcontext()
 
     def capabilities(self) -> dict:
         ok, reason = self.provider.is_available()
@@ -116,7 +132,10 @@ class OCRService:
             out.update(width=dec.width, height=dec.height, warnings=list(dec.warnings))
             if cancel.is_set():
                 raise VistaError("cancelled", "CANCELLED", "The task was cancelled.")
-            self._ensure_loaded()
+            if self.manager is None:
+                self._ensure_loaded()
+            else:
+                self._check_available()  # loading happens inside _model_use
             img, warnings = dec.image, out["warnings"]
             side = max(dec.width, dec.height)
             if side > self.settings.ocr_max_side:
@@ -128,7 +147,8 @@ class OCRService:
             if cancel.is_set():
                 raise VistaError("cancelled", "CANCELLED", "The task was cancelled.")
             try:
-                raw = self.provider.recognize(img)
+                with self._model_use(cancel):
+                    raw = self.provider.recognize(img)
             except VistaError:
                 raise
             except Exception as exc:

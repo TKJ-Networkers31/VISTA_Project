@@ -11,13 +11,13 @@ VISTA is a modular visual intelligence platform intended to grow from image OCR 
 | Capability | Status |
 |---|---|
 | Image upload + OCR (local) | Planned — Phases 1–2 (MVP) |
-| Object detection | Planned — Phase 3 |
+| Object detection (local, YOLOX-Nano via ONNX Runtime) | Implemented in Phase 3, verified in a Linux sandbox only; model file installed separately; **not validated on the X270** — see [docs/DETECTION.md](docs/DETECTION.md) |
 | Hybrid/external providers, image understanding | Planned — Phase 4 |
 | Live camera | Planned — Phase 5 |
 | Voice (STT/intent/TTS) | Planned — Phase 6 |
 | Tracking, depth/pose | Planned — Phase 7 (optional/experimental) |
 | Spatial 3D, AR/MR/XR, Android | Future/experimental — Phases 8–9 |
-| Anything above implemented | **None** |
+| Anything above implemented | OCR (Phases 1–2) and detection (Phase 3) have code and tests; Windows/X270 validation is still pending. Everything else: **none** |
 
 Nothing is "experimental" yet because nothing is built; unsupported spatial features report `not_implemented`.
 
@@ -53,7 +53,7 @@ Default bind is localhost. External AI services are off by default and never rec
 Phases 0–10 in [docs/ROADMAP.md](docs/ROADMAP.md). No phase counts as complete without evidence.
 
 ## Documentation index
-[Overview](docs/PROJECT_OVERVIEW.md) · [Product spec](docs/PRODUCT_SPEC.md) · [Tech stack](docs/TECH_STACK.md) · [File tree](docs/FILE_TREE.md) · [Provider policy](docs/API_PROVIDER_POLICY.md) · [Errors](docs/ERROR_HANDLING.md) · [Observability](docs/OBSERVABILITY.md) · [Spatial plan](docs/SPATIAL_COMPUTING_PLAN.md) · [Dev workflow](docs/DEVELOPMENT_WORKFLOW.md) · [Planning notes](docs/PLANNING_NOTES.md) · [Glossary](docs/GLOSSARY.md) · [ADRs](docs/ADR/README.md) · [AI rules](ai/AI_WORKING_RULES.md) · [GitHub setup](GITHUB_SETUP.md)
+[Detection](docs/DETECTION.md) · [Overview](docs/PROJECT_OVERVIEW.md) · [Product spec](docs/PRODUCT_SPEC.md) · [Tech stack](docs/TECH_STACK.md) · [File tree](docs/FILE_TREE.md) · [Provider policy](docs/API_PROVIDER_POLICY.md) · [Errors](docs/ERROR_HANDLING.md) · [Observability](docs/OBSERVABILITY.md) · [Spatial plan](docs/SPATIAL_COMPUTING_PLAN.md) · [Dev workflow](docs/DEVELOPMENT_WORKFLOW.md) · [Planning notes](docs/PLANNING_NOTES.md) · [Glossary](docs/GLOSSARY.md) · [ADRs](docs/ADR/README.md) · [AI rules](ai/AI_WORKING_RULES.md) · [GitHub setup](GITHUB_SETUP.md)
 
 ## Contributing
 [CONTRIBUTING.md](CONTRIBUTING.md) · [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)

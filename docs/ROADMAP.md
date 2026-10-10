@@ -34,6 +34,8 @@ No phase is complete without evidence (test output, measurements, or review note
 
 ## Phase 3 — Object detection with a lightweight model and measured resource use
 
+**Status (2026-10-09): implemented; sandbox-verified only.** Contract, provider, orchestration, API, shared residency, tests and benchmark script exist (see [DETECTION.md](DETECTION.md)). **Open exit conditions:** X270 measurements recorded in RESOURCE_BUDGET.md, and the weights license confirmed by the owner. Not complete until both are done.
+
 - **Goals:** Detection provider, normalized output, resource measurement.
 - **Dependencies:** Phase 2; model and license verified.
 - **Deliverables:** Detector provider, contract update, benchmark notes (measured).

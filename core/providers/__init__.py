@@ -1,1 +1,8 @@
-from .base import OCRProvider, RawOCRItem, RawOCRResult  # noqa: F401
+from .base import (  # noqa: F401
+    DetectionProvider,
+    OCRProvider,
+    RawDetection,
+    RawDetectionResult,
+    RawOCRItem,
+    RawOCRResult,
+)

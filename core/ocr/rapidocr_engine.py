@@ -43,6 +43,13 @@ class RapidOCRProvider:
 
             self._engine = RapidOCR()
 
+    def unload(self) -> None:
+        """Drop the engine so its memory can be reclaimed (the OS may keep part of it; see docs/DETECTION.md)."""
+        import gc
+
+        self._engine = None
+        gc.collect()
+
     def recognize(self, image_rgb) -> RawOCRResult:
         import numpy as np
 

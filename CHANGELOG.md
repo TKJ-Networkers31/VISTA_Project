@@ -3,6 +3,15 @@
 Describes the documentation foundation, not application features.
 
 ## [Unreleased]
+### Added (Phase 3 — object detection; sandbox-verified, X270 validation pending)
+- `POST /api/v1/detection`, `GET /api/v1/detection/capabilities`, `GET /api/v1/capabilities`; `detection` in `/health`.
+- Detection contract `0.3-detection`, `DetectionProvider`, YOLOX/ONNX Runtime provider, `DetectionService`.
+- `ModelManager`: shared OCR + detection model residency (`VISTA_MAX_RESIDENT_MODELS` is now enforced).
+- `scripts/benchmark_detection.py`, `scripts/fetch_detection_model.py`, detection tests (incl. optional real-model test).
+- `docs/DETECTION.md`, ADR-0005.
+### Changed
+- `OCRService` optionally uses the shared `ModelManager`; `RapidOCRProvider` gained `unload()`; OCR response unchanged.
+- `requirements.txt` lists `onnxruntime` and `numpy` explicitly (already installed transitively by OCR).
 
 ## [0.2.0-docs] — Phase 0
 ### Changed
