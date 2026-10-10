@@ -6,8 +6,7 @@ import pytest
 from pydantic import ValidationError
 
 from core.config import ConfigError, Settings
-from core.contracts import (DETECTION_SCHEMA_VERSION, Detection, DetectionResponse, EngineInfo, ErrorInfo,
-                            OCRResponse)
+from core.contracts import DETECTION_SCHEMA_VERSION, Detection, DetectionResponse, EngineInfo, ErrorInfo, OCRResponse
 from core.detection import geometry as g
 from core.detection.coco_labels import COCO_CLASSES
 from core.detection.normalize import normalize_detections

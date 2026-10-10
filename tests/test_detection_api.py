@@ -52,7 +52,7 @@ def test_success_contract_and_order(make_det_client):
                                      "bbox2d": [50.0, 40.0, 150.0, 90.0]}
     assert body["engine"]["id"] == "fake-detector" and body["model"]["id"] == "fake-model"
     assert body["parameters"] == {"confidence_threshold": 0.3, "nms_iou_threshold": 0.45, "max_detections": 100,
-                                  "input_size": 416}
+                                "input_size": 416, "prompt": None}
     assert body["error"] is None and det.seen_size == (200, 100)  # backend sees the ORIGINAL image
 
 

@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Mapping, Optional
 
 MIME_TO_FORMAT = {"image/jpeg": "JPEG", "image/png": "PNG", "image/webp": "WEBP"}
-DETECTION_BACKENDS = ("yolox-onnx",)
+DETECTION_BACKENDS = ("yolox-onnx", "yolox_nano", "yolo26n_onnx", "open_vocabulary")
 DETECTION_RESIZE_MODES = ("pil", "cv2")  # see core/detection/geometry.py
 DETECTION_NMS_MODES = ("class_aware", "agnostic")
 _TRUE = {"1", "true", "yes", "on"}

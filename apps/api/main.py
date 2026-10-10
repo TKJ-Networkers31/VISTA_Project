@@ -154,14 +154,15 @@ def create_app(settings: Optional[Settings] = None, provider=None, detection_pro
     @app.post("/api/v1/detection", response_model=DetectionResponse, response_model_exclude_none=False)
     async def detection(file: UploadFile = FILE_FIELD,
                         confidence: Optional[float] = Query(None, ge=0.0, le=1.0, allow_inf_nan=False),
-                        max_detections: Optional[int] = Query(None, ge=1)):
+                        max_detections: Optional[int] = Query(None, ge=1),
+                        prompt: Optional[str] = Query(None, max_length=200)):
         request_id = "req_" + uuid.uuid4().hex[:12]
         try:
             data = await file.read()
         finally:
             await file.close()
         resp = await detection_service.process(data, _safe_name(file.filename), file.content_type, request_id,
-                                               confidence, max_detections)
+                                               confidence, max_detections, prompt)
         log.info("request_id=%s detection status=%s code=%s bytes=%d n=%d ms=%s", request_id, resp.status,
                  resp.error.code if resp.error else "-", len(data), len(resp.detections), resp.processing_time_ms)
         return JSONResponse(resp.model_dump(), status_code=_http_status(resp))

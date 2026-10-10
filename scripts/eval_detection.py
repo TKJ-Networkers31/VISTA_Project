@@ -38,6 +38,7 @@ ROOT = Path(__file__).resolve().parents[1]
 FLOOR = 0.05
 OOD_OVERLAP_IOU = 0.3  # a false positive this much on top of an unsupported object counts as a confusion with it
 
+
 Box = Sequence[float]
 Det = Tuple[str, float, Box]  # (label, score, [x1, y1, x2, y2])
 
@@ -129,9 +130,9 @@ def sha256_bytes(data: bytes) -> str:
 def collect(settings, images_dir: Path, images: List[Dict[str, Any]]) -> Dict[str, List[Det]]:
     from PIL import Image, ImageOps
 
-    from core.detection.yolox_onnx import YoloxOnnxProvider
+    from core.detection import create_detection_provider
 
-    provider = YoloxOnnxProvider(settings)
+    provider = create_detection_provider(settings)
     ok, reason = provider.is_available()
     if not ok:
         raise SystemExit(f"detection backend unavailable: {reason}")

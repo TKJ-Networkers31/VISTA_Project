@@ -54,6 +54,7 @@ class DetectionParameters(BaseModel):
     nms_iou_threshold: float = Field(ge=0.0, le=1.0)
     max_detections: int = Field(ge=1)
     input_size: Optional[int] = None
+    prompt: Optional[str] = None 
 
 
 class DetectionResponse(BaseModel):

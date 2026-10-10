@@ -2,11 +2,13 @@
 
 Mirrors OCRService on purpose (same admission, timeout and cancellation semantics) and shares model residency with it
 through `ModelManager`. The detection model is loaded once and reused; it is never loaded per request.
+An optional text prompt is passed only to providers that declare `supports_prompt = True`.
 """
 from __future__ import annotations
 
 import asyncio
 import logging
+import re
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -21,6 +23,20 @@ from core.providers import DetectionProvider
 from core.vision.validation import ImageLimits, decode_image
 
 log = logging.getLogger("vista.detection")
+
+PROMPT_MAX_CHARS = 200
+_CONTROL = re.compile(r"[\x00-\x1f\x7f]")
+
+
+def clean_prompt(prompt: Optional[str]) -> Optional[str]:
+    """None stays None. Otherwise: stripped, 1..PROMPT_MAX_CHARS printable characters, else INVALID_PARAMETER."""
+    if prompt is None:
+        return None
+    text = prompt.strip()
+    if not text or len(text) > PROMPT_MAX_CHARS or _CONTROL.search(text):
+        raise VistaError("invalid_input", "INVALID_PARAMETER",
+                         f"prompt must be 1-{PROMPT_MAX_CHARS} printable characters.")
+    return text
 
 
 class DetectionService:
@@ -102,13 +118,15 @@ class DetectionService:
     def _model_use(self, cancel: threading.Event):
         return self.manager.use("detection", cancel) if self.manager is not None else nullcontext()
 
-    def _parameters(self, confidence: Optional[float], max_detections: Optional[int]) -> DetectionParameters:
+    def _parameters(self, confidence: Optional[float], max_detections: Optional[int],
+                    prompt: Optional[str] = None) -> DetectionParameters:
         s = self.settings
         # A request may only be stricter than the configured cap, never larger.
         cap = s.detection_max_detections if max_detections is None else min(max_detections, s.detection_max_detections)
         return DetectionParameters(
             confidence_threshold=s.detection_conf_threshold if confidence is None else confidence,
-            nms_iou_threshold=s.detection_nms_iou, max_detections=cap, input_size=s.detection_input_size)
+            nms_iou_threshold=s.detection_nms_iou, max_detections=cap, input_size=s.detection_input_size,
+            prompt=prompt)
 
     def capabilities(self) -> dict:
         s = self.settings
@@ -120,29 +138,36 @@ class DetectionService:
             if ok and self._last_load_failed:
                 status = "unavailable"
                 reason = "The last model load failed; the next request retries. See the server log."
+        describe = getattr(self.provider, "describe", None)
+        extra = describe() if callable(describe) else {}
+        detection = dict(extra)  # family, supported, experimental, classes, runtime, limitations, license, layout
+        detection.update({
+            "implemented": True,
+            "status": status,
+            "reason": reason,
+            "backend": s.detection_backend,
+            "supports_prompt": bool(getattr(self.provider, "supports_prompt", False)),
+            "engine": self.provider.info().model_dump(),
+            "model": self.provider.model_info().model_dump(),
+            "model_loaded": bool(self.provider.is_loaded()),
+            "parameters": self._parameters(None, None).model_dump(),
+        })
         return {
-            "detection": {
-                "implemented": True,
-                "status": status,
-                "reason": reason,
-                "engine": self.provider.info().model_dump(),
-                "model": self.provider.model_info().model_dump(),
-                "model_loaded": bool(self.provider.is_loaded()),
-                "parameters": self._parameters(None, None).model_dump(),
-            },
+            "detection": detection,
             "limits": {
                 "max_upload_bytes": self.limits.max_bytes,
                 "max_image_side": self.limits.max_side,
                 "max_image_pixels": self.limits.max_pixels,
                 "allowed_mime": sorted(self.limits.allowed_mime),
                 "task_timeout_seconds": s.task_timeout_seconds,
+                "prompt_max_chars": PROMPT_MAX_CHARS,
             },
             "queue": {"inflight": self._inflight, "capacity": self.capacity},
         }
 
     # -- pipeline (runs in a worker thread) --
     def _pipeline(self, data: bytes, mime: Optional[str], cancel: threading.Event,
-                  params: DetectionParameters, out: dict) -> None:
+                  params: DetectionParameters, out: dict, prompt: Optional[str] = None) -> None:
         t0 = time.perf_counter()
         try:
             if cancel.is_set():
@@ -158,8 +183,12 @@ class DetectionService:
                 raise VistaError("cancelled", "CANCELLED", "The task was cancelled.")
             try:
                 with self._model_use(cancel):
-                    raw = self.provider.detect(dec.image, params.confidence_threshold, params.nms_iou_threshold,
-                                               params.max_detections)
+                    if prompt:
+                        raw = self.provider.detect(dec.image, params.confidence_threshold, params.nms_iou_threshold,
+                                                   params.max_detections, prompt=prompt)
+                    else:  # exact pre-upgrade call: providers without prompt support are unaffected
+                        raw = self.provider.detect(dec.image, params.confidence_threshold, params.nms_iou_threshold,
+                                                   params.max_detections)
             except VistaError:
                 raise
             except Exception as exc:
@@ -175,11 +204,21 @@ class DetectionService:
             out["ms"] = round((time.perf_counter() - t0) * 1000, 1)
 
     async def process(self, data: bytes, filename: Optional[str], mime: Optional[str], request_id: str,
-                      confidence: Optional[float] = None, max_detections: Optional[int] = None) -> DetectionResponse:
+                      confidence: Optional[float] = None, max_detections: Optional[int] = None,
+                      prompt: Optional[str] = None) -> DetectionResponse:
         out: dict = {"warnings": []}
-        params = self._parameters(confidence, max_detections)
         base = dict(request_id=request_id, filename=filename, engine=self.provider.info(),
-                    model=self.provider.model_info(), parameters=params)
+                    model=self.provider.model_info())
+        try:
+            prompt = clean_prompt(prompt)
+            if prompt is not None and not getattr(self.provider, "supports_prompt", False):
+                raise VistaError("invalid_input", "PROMPT_NOT_SUPPORTED",
+                                 "The configured detection backend does not accept a text prompt.")
+        except VistaError as err:
+            base["parameters"] = self._parameters(confidence, max_detections)
+            return self._failed(base, err, out)
+        params = self._parameters(confidence, max_detections, prompt)
+        base["parameters"] = params
         cancel = threading.Event()
         try:
             self._reserve(cancel)
@@ -188,7 +227,7 @@ class DetectionService:
 
         def job():
             try:
-                self._pipeline(data, mime, cancel, params, out)
+                self._pipeline(data, mime, cancel, params, out, prompt)
             finally:
                 self._release(cancel)  # the slot is freed only when the thread really finishes
 

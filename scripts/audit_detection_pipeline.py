@@ -1,6 +1,7 @@
 """Pipeline audit with the REAL model on YOUR images. Offline; needs models/yolox_nano.onnx and onnxruntime.
 
-Run:  python -m scripts.audit_detection_pipeline --image C:\\path\\a.jpg [--image b.jpg ...] [--model models\\yolox_nano.onnx]
+Run:  python -m scripts.audit_detection_pipeline --image C:\\path\\a.jpg [--image b.jpg ...]
+          [--model models\\yolox_nano.onnx]
 
 It prints (nothing is invented; every number comes from running the model):
   1. model input/output signature and the value ranges of the raw head output (objectness / class columns must be
@@ -48,7 +49,8 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     session = ort.InferenceSession(str(args.model), providers=["CPUExecutionProvider"])
     i, o = session.get_inputs()[0], session.get_outputs()[0]
-    print(f"input  {i.name} {i.shape} {i.type}\noutput {o.name} {o.shape} {o.type}  (labels in code: {len(COCO_CLASSES)})")
+    print(f"input  {i.name} {i.shape} {i.type}")
+    print(f"output {o.name} {o.shape} {o.type}  (labels in code: {len(COCO_CLASSES)})")
     variants = [("current: pil + class-aware NMS", "pil", "class_aware", False),
                 ("cv2 resize + class-aware NMS", "cv2", "class_aware", False),
                 ("pil + agnostic NMS", "pil", "agnostic", False),
