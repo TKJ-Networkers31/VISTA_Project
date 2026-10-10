@@ -19,6 +19,7 @@ from core.providers import RawDetection, RawDetectionResult
 
 from . import ultralytics_geometry as ug
 from .coco_labels import COCO_CLASSES
+from .ort_options import build_session_options
 from .yolox_onnx import resolve_model_path, sha256_file
 
 
@@ -77,10 +78,7 @@ class Yolo26OnnxProvider:
             pin = self._settings.detection_model_sha256
             if pin and digest != pin:
                 raise ValueError("model file SHA-256 does not match VISTA_DETECTION_MODEL_SHA256")
-            options = ort.SessionOptions()
-            options.log_severity_level = 3
-            if self._settings.detection_threads > 0:
-                options.intra_op_num_threads = self._settings.detection_threads
+            options = build_session_options(ort, self._settings.detection_threads)
             session = ort.InferenceSession(str(self._path), sess_options=options, providers=["CPUExecutionProvider"])
             labels = self._labels_from_metadata(session) or self._labels
             layout = self._check_signature(session, len(labels))
@@ -146,7 +144,7 @@ class Yolo26OnnxProvider:
         self.last_timings = {"preprocess_ms": (t1 - t0) * 1000, "inference_ms": (t2 - t1) * 1000,
                              "postprocess_ms": (t3 - t2) * 1000}
         found = []
-        for box, score, cid in zip(boxes, scores, ids):
+        for box, score, cid in zip(boxes, scores, ids, strict=True):
             cid = int(cid)
             label = self._labels[cid] if 0 <= cid < len(self._labels) else None
             found.append(RawDetection(class_id=cid, confidence=float(score), bbox=[float(v) for v in box],

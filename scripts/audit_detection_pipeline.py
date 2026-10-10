@@ -34,7 +34,7 @@ def run_variant(session, name: str, img: Image.Image, size: int, resize: str, nm
     raw = np.asarray(session.run(None, {session.get_inputs()[0].name: blob})[0])[0]
     boxes, scores, ids = g.postprocess_yolox(raw, size, ratio, conf, 0.45, 100, nms_mode)
     return raw, [(COCO_CLASSES[int(i)], float(s), [round(float(v), 1) for v in b])
-                 for b, s, i in zip(boxes, scores, ids)]
+                 for b, s, i in zip(boxes, scores, ids, strict=True)]
 
 
 def main(argv: Optional[List[str]] = None) -> int:

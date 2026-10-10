@@ -21,6 +21,7 @@ from core.providers import RawDetection, RawDetectionResult
 
 from .coco_labels import COCO_CLASSES
 from .geometry import expected_anchor_count, letterbox_image, postprocess_yolox
+from .ort_options import build_session_options
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -85,10 +86,7 @@ class YoloxOnnxProvider:
             pin = self._settings.detection_model_sha256
             if pin and digest != pin:
                 raise ValueError("model file SHA-256 does not match VISTA_DETECTION_MODEL_SHA256")
-            options = ort.SessionOptions()
-            options.log_severity_level = 3
-            if self._settings.detection_threads > 0:
-                options.intra_op_num_threads = self._settings.detection_threads
+            options = build_session_options(ort, self._settings.detection_threads)
             session = ort.InferenceSession(str(self._path), sess_options=options, providers=["CPUExecutionProvider"])
             self._check_signature(session)
             self._input_name = session.get_inputs()[0].name
@@ -141,7 +139,7 @@ class YoloxOnnxProvider:
         self.last_timings = {"preprocess_ms": (t1 - t0) * 1000, "inference_ms": (t2 - t1) * 1000,
                              "postprocess_ms": (t3 - t2) * 1000}
         found = []
-        for box, score, cid in zip(boxes, scores, class_ids):
+        for box, score, cid in zip(boxes, scores, class_ids, strict=True):
             cid = int(cid)
             label = self._labels[cid] if 0 <= cid < len(self._labels) else None
             found.append(RawDetection(class_id=cid, confidence=float(score), bbox=[float(v) for v in box], label=label))
