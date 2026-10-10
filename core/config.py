@@ -13,6 +13,8 @@ from typing import Mapping, Optional
 
 MIME_TO_FORMAT = {"image/jpeg": "JPEG", "image/png": "PNG", "image/webp": "WEBP"}
 DETECTION_BACKENDS = ("yolox-onnx",)
+DETECTION_RESIZE_MODES = ("pil", "cv2")  # see core/detection/geometry.py
+DETECTION_NMS_MODES = ("class_aware", "agnostic")
 _TRUE = {"1", "true", "yes", "on"}
 _FALSE = {"0", "false", "no", "off"}
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
@@ -75,6 +77,13 @@ def _bool(env: Mapping[str, str], name: str, default: bool) -> bool:
     raise ConfigError(f"{name} must be true or false")
 
 
+def _choice(env: Mapping[str, str], name: str, default: str, allowed: tuple) -> str:
+    value = (env.get(name) or default).strip().lower()
+    if value not in allowed:
+        raise ConfigError(f"{name} must be one of: " + ", ".join(allowed))
+    return value
+
+
 @dataclass(frozen=True)
 class Settings:
     host: str = "127.0.0.1"
@@ -103,6 +112,9 @@ class Settings:
     detection_nms_iou: float = 0.45
     detection_max_detections: int = 100
     detection_threads: int = 0  # 0 = let ONNX Runtime decide
+    # --- pipeline variants for accuracy evaluation (defaults = behavior before the audit) ---
+    detection_resize: str = "pil"  # "pil" | "cv2"
+    detection_nms_mode: str = "class_aware"  # "class_aware" | "agnostic"
 
     @classmethod
     def from_env(cls, env: Optional[Mapping[str, str]] = None) -> "Settings":
@@ -159,4 +171,6 @@ class Settings:
             detection_nms_iou=_float(env, "VISTA_DETECTION_NMS_IOU", 0.45, 0.0, 1.0),
             detection_max_detections=_int(env, "VISTA_DETECTION_MAX_DETECTIONS", 100, 1),
             detection_threads=_int(env, "VISTA_DETECTION_THREADS", 0, 0),
+            detection_resize=_choice(env, "VISTA_DETECTION_RESIZE", "pil", DETECTION_RESIZE_MODES),
+            detection_nms_mode=_choice(env, "VISTA_DETECTION_NMS_MODE", "class_aware", DETECTION_NMS_MODES),
         )

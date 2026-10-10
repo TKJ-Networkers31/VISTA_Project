@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VISTA – Realtime Detection</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/realtime.css">
+</head>
+<body>
+<main>
+  <h1>VISTA <small>Realtime detection (local)</small></h1>
+  <nav class="muted"><a href="/">OCR</a> · Realtime detection</nav>
+
+  <div class="row">
+    <span id="cam-status" class="pill">Camera: off</span>
+    <span id="be-status" class="pill">Backend: checking…</span>
+  </div>
+  <p id="error" role="alert" hidden></p>
+
+  <div id="rt-stage">
+    <video id="video" playsinline muted></video>
+    <canvas id="rt-overlay"></canvas>
+    <div id="placeholder" class="placeholder">Camera is off. Press “Start camera”.</div>
+  </div>
+
+  <div class="row">
+    <button id="start-btn" type="button">Start camera</button>
+    <button id="stop-btn" type="button" class="secondary" disabled>Stop camera</button>
+    <button id="pause-btn" type="button" class="secondary" disabled>Pause detection</button>
+  </div>
+
+  <div class="row controls">
+    <label>Camera
+      <select id="camera-select"><option value="">Default camera</option></select>
+    </label>
+    <label>Target detection FPS
+      <select id="fps-select">
+        <option value="1">1</option>
+        <option value="2" selected>2</option>
+        <option value="3">3</option>
+        <option value="5">5</option>
+      </select>
+    </label>
+    <label>Frame size sent (longest side)
+      <select id="size-select">
+        <option value="416">416 px</option>
+        <option value="640" selected>640 px</option>
+      </select>
+    </label>
+    <label>Confidence threshold: <span id="conf-value">0.30</span>
+      <input id="conf-range" type="range" min="0.05" max="0.95" step="0.05" value="0.30">
+    </label>
+  </div>
+
+  <section>
+    <h2>Measured values</h2>
+    <div class="stats">
+      <div class="stat">Video FPS<b id="stat-video-fps">n/a</b></div>
+      <div class="stat">Detection FPS<b id="stat-infer-fps">n/a</b></div>
+      <div class="stat">Round trip (median)<b id="stat-rtt">n/a</b></div>
+      <div class="stat">Server processing<b id="stat-server">n/a</b></div>
+      <div class="stat">Objects (latest frame)<b id="stat-count">0</b></div>
+      <div class="stat">Failed requests<b id="stat-failed">0</b></div>
+    </div>
+    <p id="stat-note" class="muted">Values are measured in this browser session; “n/a” means not measured yet.</p>
+  </section>
+
+  <section>
+    <h2>Latest detections</h2>
+    <p id="det-empty" class="muted">No detections yet.</p>
+    <ul id="det-list"></ul>
+  </section>
+</main>
+<script src="/static/realtime_core.js"></script>
+<script src="/static/realtime.js"></script>
+</body>
+</html>

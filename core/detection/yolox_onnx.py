@@ -126,7 +126,7 @@ class YoloxOnnxProvider:
         if session is None or name is None:
             raise RuntimeError("detection model is not loaded")
         t0 = time.perf_counter()
-        blob, ratio = letterbox_image(image_rgb, self._size)
+        blob, ratio = letterbox_image(image_rgb, self._size, self._settings.detection_resize)
         t1 = time.perf_counter()
         outputs = session.run(None, {name: blob})
         t2 = time.perf_counter()
@@ -136,7 +136,7 @@ class YoloxOnnxProvider:
         if raw.ndim == 3:
             raw = raw[0]
         boxes, scores, class_ids = postprocess_yolox(raw, self._size, ratio, conf_threshold, nms_iou,
-                                                     max_detections)
+                                                     max_detections, self._settings.detection_nms_mode)
         t3 = time.perf_counter()
         self.last_timings = {"preprocess_ms": (t1 - t0) * 1000, "inference_ms": (t2 - t1) * 1000,
                              "postprocess_ms": (t3 - t2) * 1000}

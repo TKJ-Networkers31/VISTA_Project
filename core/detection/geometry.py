@@ -2,9 +2,16 @@
 
 Conventions (match the reference YOLOX deployment code):
 - The image is resized by ONE ratio `r = min(S / height, S / width)` and pasted at the TOP-LEFT of an SxS canvas
-  filled with 114; the padding is therefore only on the right and/or bottom.
+  filled with 114; the padding is therefore only on the right and/or bottom. The aspect ratio is never changed.
 - Network input is BGR, channels-first, float32 in 0..255 (no mean/std).
 - Boxes in the network's pixel space are mapped back to the source image by dividing by `r`.
+
+Two switches exist so the pipeline can be compared with the upstream reference WITHOUT changing the defaults
+(see docs/DETECTION_EVAL.md; neither is proven to matter for accuracy until measured on a labeled set):
+- `resize`: "pil" (default, Pillow bilinear, antialiased when shrinking) or "cv2" (OpenCV INTER_LINEAR, which is what
+  the upstream YOLOX preprocessing uses).
+- `nms_mode`: "class_aware" (default; boxes of different classes never suppress each other, so one object can appear
+  twice with two labels) or "agnostic" (one box per object, as in the upstream ONNX Runtime demo).
 """
 from __future__ import annotations
 
@@ -17,6 +24,8 @@ from PIL import Image
 PAD_VALUE = 114
 STRIDES = (8, 16, 32)
 PRE_NMS_TOP_K = 1000  # candidates kept (by score) before NMS; bounds the NMS loop on pathological outputs
+RESIZE_MODES = ("pil", "cv2")
+NMS_MODES = ("class_aware", "agnostic")
 
 
 def letterbox_size(width: int, height: int, size: int) -> Tuple[int, int, float]:
@@ -27,15 +36,23 @@ def letterbox_size(width: int, height: int, size: int) -> Tuple[int, int, float]
     return max(1, int(width * ratio)), max(1, int(height * ratio)), ratio
 
 
-def letterbox_image(image_rgb: Image.Image, size: int) -> Tuple[np.ndarray, float]:
+def letterbox_image(image_rgb: Image.Image, size: int, resize: str = "pil") -> Tuple[np.ndarray, float]:
     """PIL RGB image -> (float32 array [1, 3, size, size] in BGR 0..255, ratio)."""
+    if resize not in RESIZE_MODES:
+        raise ValueError("resize must be one of: " + ", ".join(RESIZE_MODES))
     if image_rgb.mode != "RGB":
         image_rgb = image_rgb.convert("RGB")
     width, height = image_rgb.size
     new_w, new_h, ratio = letterbox_size(width, height, size)
-    resized = image_rgb.resize((new_w, new_h), Image.Resampling.BILINEAR)
     canvas = np.full((size, size, 3), PAD_VALUE, dtype=np.uint8)
-    canvas[:new_h, :new_w] = np.asarray(resized)[:, :, ::-1]  # RGB -> BGR
+    if resize == "cv2":
+        import cv2  # opencv is already installed as a dependency of rapidocr-onnxruntime
+
+        bgr = np.ascontiguousarray(np.asarray(image_rgb)[:, :, ::-1])
+        canvas[:new_h, :new_w] = cv2.resize(bgr, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
+    else:
+        resized = image_rgb.resize((new_w, new_h), Image.Resampling.BILINEAR)
+        canvas[:new_h, :new_w] = np.asarray(resized)[:, :, ::-1]  # RGB -> BGR
     blob = np.ascontiguousarray(canvas.transpose(2, 0, 1), dtype=np.float32)
     return blob[None, ...], ratio
 
@@ -120,16 +137,18 @@ def class_aware_nms(boxes: np.ndarray, scores: np.ndarray, class_ids: np.ndarray
 
 
 def postprocess_yolox(raw: np.ndarray, size: int, ratio: float, conf_threshold: float, nms_iou: float,
-                      max_detections: int) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+                      max_detections: int, nms_mode: str = "class_aware") -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """RAW YOLOX output [A, 5 + C] -> (boxes_xyxy [N, 4] in SOURCE-image pixels, scores [N], class_ids [N]).
 
     score = objectness x best class probability (one class per anchor), as in the reference implementation.
     Non-finite values are discarded, never repaired. Result is sorted by score, highest first, at most
     `max_detections` long. Boxes are clipped to the network canvas only; clipping to the real image happens in
-    `core.detection.normalize`.
+    `core.detection.normalize`. `nms_mode` is "class_aware" (default) or "agnostic".
     """
     if not (ratio > 0 and np.isfinite(ratio)):
         raise ValueError("ratio must be a positive finite number")
+    if nms_mode not in NMS_MODES:
+        raise ValueError("nms_mode must be one of: " + ", ".join(NMS_MODES))
     pred = decode_yolox(raw, size)
     obj = pred[:, 4]
     cls_scores = pred[:, 5:]
@@ -147,6 +166,9 @@ def postprocess_yolox(raw: np.ndarray, size: int, ratio: float, conf_threshold: 
         idx = idx[top]
     boxes, scores, class_ids = np.clip(boxes[idx], 0.0, float(size)), scores[idx], class_ids[idx]
 
-    keep = class_aware_nms(boxes, scores, class_ids, nms_iou)[:max_detections]
+    if nms_mode == "agnostic":
+        keep = nms(boxes, scores, nms_iou)[:max_detections]
+    else:
+        keep = class_aware_nms(boxes, scores, class_ids, nms_iou)[:max_detections]
     boxes_src = boxes[keep].astype(np.float64) / ratio
     return boxes_src, scores[keep].astype(np.float64), class_ids[keep].astype(np.int64)

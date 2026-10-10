@@ -1,0 +1,10 @@
+NEW
+apps/web/static/realtime.html
+apps/web/static/realtime.css
+apps/web/static/realtime.js
+apps/web/static/realtime_core.js
+tests/js/realtime_core.test.js
+tests/test_realtime_ui.py
+docs/REALTIME.md
+MODIFIED
+apps/web/static/index.html   (only change: one nav line linking to /static/realtime.html)
