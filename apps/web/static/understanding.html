@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VISTA – Image understanding</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/understanding.css?v=2">
+</head>
+<body>
+<main>
+  <h1>VISTA <small>Image understanding (external)</small></h1>
+  <nav class="muted"><a href="/">OCR</a> · <a href="/static/realtime.html">Realtime detection</a> · Image understanding</nav>
+  <p class="notice">This feature is <b>not local</b>. When you ask, a re-encoded copy of the image and your question are sent to
+    the NVIDIA hosted API. Nothing is sent unless you tick the consent box below.</p>
+  <p id="provider-status" class="pill">Provider: checking…</p>
+  <p id="error" role="alert" hidden></p>
+
+  <label id="drop" for="file-input">
+    <input id="file-input" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+    <span>Click or drop an image here (JPEG, PNG, WebP)</span>
+  </label>
+  <div id="stage" hidden><img id="preview" alt="Selected image"></div>
+
+  <label class="field">Question (optional, max 1000 characters)
+    <textarea id="question" rows="3" maxlength="1000" placeholder="Describe this image."></textarea>
+  </label>
+  <div class="row controls">
+    <label class="field">Mode
+      <select id="mode-select">
+        <option value="hybrid" selected>hybrid</option>
+        <option value="external_fallback">external_fallback</option>
+        <option value="local_only">local_only (always rejected for this feature)</option>
+      </select>
+    </label>
+    <label class="consent"><input id="consent" type="checkbox"> I agree to send this image and question to NVIDIA.</label>
+  </div>
+  <div class="row">
+    <button id="ask-btn" type="button" disabled>Ask</button>
+    <button id="clear-btn" type="button" class="secondary" disabled>Clear</button>
+    <span id="loading" class="muted" hidden>Waiting for the provider…</span>
+  </div>
+
+  <section id="result-section" hidden>
+    <h2 id="answer-title">Answer</h2>
+    <pre id="answer"></pre>
+    <p id="route" class="muted"></p>
+    <ul id="warnings" class="muted"></ul>
+  </section>
+  <p class="muted" id="ui-build">UI build 2 (long timeouts, no empty answer box)</p>
+  <p class="muted">The answer is free text from a language model: it can be wrong, and it has no boxes or coordinates.
+    For exact text use OCR; for objects use detection.</p>
+</main>
+<script src="/static/understanding.js?v=2"></script>
+</body>
+</html>

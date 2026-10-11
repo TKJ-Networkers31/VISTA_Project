@@ -8,17 +8,27 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, File, Query, Request, UploadFile
+from fastapi import FastAPI, File, Form, Query, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from core.config import Settings
-from core.contracts import DETECTION_SCHEMA_VERSION, SCHEMA_VERSION, DetectionResponse, ErrorInfo, OCRResponse
+from core.contracts import (
+    DETECTION_SCHEMA_VERSION,
+    SCHEMA_VERSION,
+    UNDERSTANDING_SCHEMA_VERSION,
+    DetectionResponse,
+    ErrorInfo,
+    OCRResponse,
+    UnderstandingResponse,
+)
 from core.detection import create_detection_provider
 from core.ocr import create_provider
-from core.orchestration import DetectionService, ModelManager, OCRService
+from core.orchestration import DetectionService, ModelManager, OCRService, UnderstandingService
+from core.providers.nim import NimAdapter, NimConfig
+from core.routing import CallBudget
 
 log = logging.getLogger("vista.api")
 WEB_DIR = Path(__file__).resolve().parents[1] / "web" / "static"
@@ -26,15 +36,20 @@ FILE_FIELD = File(...)
 BODY_SLACK = 64 * 1024  # multipart overhead allowed on top of max_upload_bytes
 OCR_PATH = "/api/v1/ocr"
 DETECTION_PATH = "/api/v1/detection"
-UPLOAD_PATHS = (OCR_PATH, DETECTION_PATH)
+UNDERSTANDING_PATH = "/api/v1/understanding"
+UPLOAD_PATHS = (OCR_PATH, DETECTION_PATH, UNDERSTANDING_PATH)
+ERROR_MODELS = {DETECTION_PATH: DetectionResponse, UNDERSTANDING_PATH: UnderstandingResponse}
 
 HTTP_BY_CODE = {"EMPTY_FILE": 400, "CORRUPT_IMAGE": 400, "MISSING_FILE": 400, "IMAGE_TOO_LARGE": 413,
-                "IMAGE_DIMENSIONS_EXCEEDED": 413, "UNSUPPORTED_FORMAT": 415, "LENGTH_REQUIRED": 411}
+                "IMAGE_DIMENSIONS_EXCEEDED": 413, "UNSUPPORTED_FORMAT": 415, "LENGTH_REQUIRED": 411,
+                "CONSENT_REQUIRED": 403, "IMAGE_TOO_LARGE_FOR_PROVIDER": 413,
+                "NIM_AUTH_FAILED": 502, "NIM_BAD_REQUEST": 502, "NIM_MALFORMED": 502, "NIM_EMPTY": 502,
+                "NIM_SERVER_ERROR": 502}
 HTTP_BY_CATEGORY = {"invalid_input": 400, "resource_limit": 429, "unavailable": 503, "timeout": 504,
-                    "cancelled": 503, "provider_internal": 500}
+                    "cancelled": 503, "provider_internal": 500, "not_implemented": 501}
 
 
-def _http_status(resp) -> int:  # OCRResponse or DetectionResponse: both expose status and error
+def _http_status(resp) -> int:  # OCR, detection or understanding response: all expose status and error
     if resp.status == "succeeded" or resp.error is None:
         return 200
     return HTTP_BY_CODE.get(resp.error.code) or HTTP_BY_CATEGORY.get(resp.error.category, 500)
@@ -50,20 +65,28 @@ def _safe_name(name: Optional[str]) -> Optional[str]:
 
 def _error_response(code: str, category: str, message: str, status: int, _path: Optional[str] = None,
                     **details) -> JSONResponse:
-    """Error envelope in the shape of the route that failed (detection routes get the detection contract)."""
-    model = DetectionResponse if _path == DETECTION_PATH else OCRResponse
+    """Error envelope in the shape of the route that failed (detection/understanding routes get their own contract)."""
+    model = ERROR_MODELS.get(_path, OCRResponse)
     body = model(request_id="req_" + uuid.uuid4().hex[:12], status="failed",
                  error=ErrorInfo(category=category, code=code, message=message, details=details))
     return JSONResponse(body.model_dump(), status_code=status)
 
 
-def create_app(settings: Optional[Settings] = None, provider=None, detection_provider=None) -> FastAPI:
+def create_app(settings: Optional[Settings] = None, provider=None, detection_provider=None,
+               understanding_adapter=None) -> FastAPI:
     settings = settings or Settings.from_env()
     provider = provider or create_provider(settings.ocr_engine)
     detection_provider = detection_provider or create_detection_provider(settings)
     manager = ModelManager(settings.max_resident_models, settings.model_acquire_timeout_seconds)
     service = OCRService(provider, settings, manager)
     detection_service = DetectionService(detection_provider, settings, manager)
+    if understanding_adapter is None:
+        understanding_adapter = NimAdapter(
+            NimConfig(api_key=settings.nim_api_key, base_url=settings.nim_base_url, model=settings.nim_model,
+                      timeout_seconds=settings.external_timeout_seconds, max_tokens=settings.nim_max_tokens,
+                      enable_thinking=settings.nim_enable_thinking, max_retries=settings.external_retry_max),
+            budget=CallBudget(settings.external_daily_call_limit))
+    understanding_service = UnderstandingService(understanding_adapter, settings)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
@@ -71,10 +94,12 @@ def create_app(settings: Optional[Settings] = None, provider=None, detection_pro
         manager.close()
         service.shutdown()
         detection_service.shutdown()
+        understanding_service.shutdown()
 
     app = FastAPI(title="VISTA", version="0.1.0", docs_url="/docs", redoc_url=None, lifespan=lifespan)
     app.state.service = service
     app.state.detection_service = detection_service
+    app.state.understanding_service = understanding_service
     app.state.models = manager
     app.state.settings = settings
 
@@ -94,11 +119,14 @@ def create_app(settings: Optional[Settings] = None, provider=None, detection_pro
 
     @app.exception_handler(RequestValidationError)
     async def _validation(request: Request, exc: RequestValidationError):
-        if request.url.path == DETECTION_PATH and not any("file" in e.get("loc", ()) for e in exc.errors()):
+        path = request.url.path
+        if path in (DETECTION_PATH, UNDERSTANDING_PATH) and not any("file" in e.get("loc", ())
+                                                                    for e in exc.errors()):
+            what = "query parameter" if path == DETECTION_PATH else "form field"
             return _error_response("INVALID_PARAMETER", "invalid_input",
-                                   "A query parameter is missing or out of range.", 400, DETECTION_PATH)
+                                   f"A {what} is missing or out of range.", 400, path)
         return _error_response("MISSING_FILE", "invalid_input", "Send one image in the multipart field 'file'.", 400,
-                               request.url.path)
+                               path)
 
     @app.exception_handler(StarletteHTTPException)
     async def _http(request: Request, exc: StarletteHTTPException):
@@ -132,12 +160,17 @@ def create_app(settings: Optional[Settings] = None, provider=None, detection_pro
         return {"schema_version": SCHEMA_VERSION,
                 "ocr": {"implemented": True, **ocr_caps},
                 **{k: v for k, v in detection_service.capabilities().items() if k == "detection"},
+                "understanding": understanding_service.capabilities()["understanding"],
                 "spatial": {"implemented": False, "status": "not_implemented"},
                 "models": {"max_resident": manager.max_resident, "state": manager.status()}}
 
     @app.get("/api/v1/detection/capabilities")
     async def detection_capabilities():
         return {"schema_version": DETECTION_SCHEMA_VERSION, **detection_service.capabilities()}
+
+    @app.get("/api/v1/understanding/capabilities")
+    async def understanding_capabilities():
+        return {"schema_version": UNDERSTANDING_SCHEMA_VERSION, **understanding_service.capabilities()}
 
     @app.post("/api/v1/ocr", response_model=OCRResponse, response_model_exclude_none=False)
     async def ocr(file: UploadFile = FILE_FIELD, include_raw: bool = False):
@@ -165,6 +198,24 @@ def create_app(settings: Optional[Settings] = None, provider=None, detection_pro
                                                confidence, max_detections, prompt)
         log.info("request_id=%s detection status=%s code=%s bytes=%d n=%d ms=%s", request_id, resp.status,
                  resp.error.code if resp.error else "-", len(data), len(resp.detections), resp.processing_time_ms)
+        return JSONResponse(resp.model_dump(), status_code=_http_status(resp))
+
+    @app.post("/api/v1/understanding", response_model=UnderstandingResponse, response_model_exclude_none=False)
+    async def understanding(file: UploadFile = FILE_FIELD, question: Optional[str] = Form(None),
+                            mode: Optional[str] = Form(None), consent_external: bool = Form(False)):
+        """question/mode/consent travel in the multipart BODY, not the URL: the access log never holds them."""
+        request_id = "req_" + uuid.uuid4().hex[:12]
+        try:
+            data = await file.read()
+        finally:
+            await file.close()
+        resp = await understanding_service.process(data, _safe_name(file.filename), file.content_type, request_id,
+                                                   question, mode, consent_external)
+        route = resp.route
+        log.info("request_id=%s understanding status=%s code=%s mode=%s target=%s sent=%s bytes=%d ms=%s",
+                 request_id, resp.status, resp.error.code if resp.error else "-", route.mode if route else "-",
+                 route.target if route else "-", route.external_transmission if route else "-", len(data),
+                 resp.processing_time_ms)
         return JSONResponse(resp.model_dump(), status_code=_http_status(resp))
 
     @app.get("/", include_in_schema=False)

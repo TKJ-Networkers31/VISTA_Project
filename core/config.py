@@ -4,20 +4,28 @@ Invalid values fail fast with a message that names the variable, never its value
 """
 from __future__ import annotations
 
+import dataclasses
 import math
 import os
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Mapping, Optional
+from typing import Any, Dict, Mapping, Optional
+from urllib.parse import urlparse
 
 MIME_TO_FORMAT = {"image/jpeg": "JPEG", "image/png": "PNG", "image/webp": "WEBP"}
 DETECTION_BACKENDS = ("yolox-onnx", "yolox_nano", "yolo26n_onnx", "open_vocabulary")
 DETECTION_RESIZE_MODES = ("pil", "cv2")  # see core/detection/geometry.py
 DETECTION_NMS_MODES = ("class_aware", "agnostic")
+POLICY_MODES = ("local_only", "hybrid", "external_fallback")  # see core/routing/policy.py
+NIM_DEFAULT_BASE_URL = "https://integrate.api.nvidia.com/v1"
+NIM_DEFAULT_MODEL = "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning"
+NIM_ALLOWED_HOSTS = frozenset({"integrate.api.nvidia.com"})  # hosted NVIDIA API only; self-hosted NIM is not enabled
 _TRUE = {"1", "true", "yes", "on"}
 _FALSE = {"0", "false", "no", "off"}
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
+_API_KEY = re.compile(r"^[\x21-\x7e]{8,512}$")  # printable ASCII, no spaces/newlines (blocks header injection)
+_MODEL_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/:\-]{0,127}$")
 
 
 class ConfigError(ValueError):
@@ -115,6 +123,25 @@ class Settings:
     # --- pipeline variants for accuracy evaluation (defaults = behavior before the audit) ---
     detection_resize: str = "pil"  # "pil" | "cv2"
     detection_nms_mode: str = "class_aware"  # "class_aware" | "agnostic"
+    # --- hybrid providers (Phase 4) ---
+    policy_default: str = "local_only"  # VISTA_POLICY_DEFAULT: mode used when a request does not name one
+    external_enabled: bool = False  # VISTA_EXTERNAL_ENABLED: master switch; false = nothing ever leaves the machine
+    external_timeout_seconds: float = 30.0  # per HTTP attempt
+    external_retry_max: int = 1  # extra attempts after 429/503 only (0..3)
+    external_daily_call_limit: int = 100  # in-memory ceiling on external HTTP attempts per UTC day
+    nim_api_key: str = field(default="", repr=False)  # VISTA_NIM_API_KEY; never logged, never sent to a browser
+    nim_base_url: str = NIM_DEFAULT_BASE_URL
+    nim_model: str = NIM_DEFAULT_MODEL
+    nim_max_tokens: int = 1024
+    nim_enable_thinking: bool = False
+    nim_max_image_bytes: int = 180_000  # conservative cap for the inline image; the real limit is UNVERIFIED
+    understanding_max_side: int = 1024  # longest side of the JPEG sent externally
+
+    def public_dict(self) -> Dict[str, Any]:
+        """asdict() without secrets: use this (not dataclasses.asdict) for reports and diagnostics."""
+        data = dataclasses.asdict(self)
+        data["nim_api_key"] = "<set>" if self.nim_api_key else ""
+        return data
 
     @classmethod
     def from_env(cls, env: Optional[Mapping[str, str]] = None) -> "Settings":
@@ -146,6 +173,20 @@ class Settings:
         if not model_id or len(model_id) > 64:
             raise ConfigError("VISTA_DETECTION_MODEL_ID must be 1-64 characters")
 
+        nim_key = (env.get("VISTA_NIM_API_KEY") or "").strip()
+        if nim_key and not _API_KEY.match(nim_key):
+            raise ConfigError("VISTA_NIM_API_KEY has an invalid format")
+        nim_url = (env.get("VISTA_NIM_BASE_URL") or NIM_DEFAULT_BASE_URL).strip()
+        parsed = urlparse(nim_url)
+        if parsed.scheme != "https" or parsed.hostname not in NIM_ALLOWED_HOSTS:
+            raise ConfigError("VISTA_NIM_BASE_URL must be an https URL on an allowed NVIDIA host")
+        nim_model = (env.get("VISTA_NIM_MODEL") or NIM_DEFAULT_MODEL).strip()
+        if not _MODEL_NAME.match(nim_model):
+            raise ConfigError("VISTA_NIM_MODEL is not a valid model name")
+        retry_max = _int(env, "VISTA_EXTERNAL_RETRY_MAX", 1, 0)
+        if retry_max > 3:
+            raise ConfigError("VISTA_EXTERNAL_RETRY_MAX must be between 0 and 3")
+
         return cls(
             host=env.get("VISTA_HOST") or "127.0.0.1",
             port=_int(env, "VISTA_PORT", 8000, 1),
@@ -173,4 +214,16 @@ class Settings:
             detection_threads=_int(env, "VISTA_DETECTION_THREADS", 0, 0),
             detection_resize=_choice(env, "VISTA_DETECTION_RESIZE", "pil", DETECTION_RESIZE_MODES),
             detection_nms_mode=_choice(env, "VISTA_DETECTION_NMS_MODE", "class_aware", DETECTION_NMS_MODES),
+            policy_default=_choice(env, "VISTA_POLICY_DEFAULT", "local_only", POLICY_MODES),
+            external_enabled=_bool(env, "VISTA_EXTERNAL_ENABLED", False),
+            external_timeout_seconds=_float(env, "VISTA_EXTERNAL_TIMEOUT_SECONDS", 30.0, 1.0, 300.0),
+            external_retry_max=retry_max,
+            external_daily_call_limit=_int(env, "VISTA_EXTERNAL_DAILY_CALL_LIMIT", 100, 1),
+            nim_api_key=nim_key,
+            nim_base_url=nim_url,
+            nim_model=nim_model,
+            nim_max_tokens=_int(env, "VISTA_NIM_MAX_TOKENS", 1024, 16),
+            nim_enable_thinking=_bool(env, "VISTA_NIM_ENABLE_THINKING", False),
+            nim_max_image_bytes=_int(env, "VISTA_NIM_MAX_IMAGE_BYTES", 180_000, 10_000),
+            understanding_max_side=_int(env, "VISTA_UNDERSTANDING_MAX_SIDE", 1024, 64),
         )

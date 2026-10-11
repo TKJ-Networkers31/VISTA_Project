@@ -13,3 +13,8 @@ from .ocr import (  # noqa: F401
     OCRResponse,
     VistaError,
 )
+from .understanding import (  # noqa: F401
+    UNDERSTANDING_SCHEMA_VERSION,
+    UnderstandingResponse,
+    UnderstandingRoute,
+)

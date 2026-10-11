@@ -1,0 +1,13 @@
+/* Image understanding page only. Reuses --b / --acc from style.css. */
+nav a { color: var(--acc); }
+.notice { border: 1px solid #d97706; border-radius: 8px; padding: .5rem .75rem; }
+.pill { display: inline-block; padding: .15rem .6rem; border: 1px solid var(--b); border-radius: 999px; font-size: .85em; }
+.pill.ok { border-color: #16a34a; color: #16a34a; }
+.pill.warn { border-color: #d97706; color: #d97706; }
+.pill.bad { border-color: #b91c1c; color: #b91c1c; }
+button.secondary { background: transparent; color: inherit; }
+.field { display: flex; flex-direction: column; gap: .15rem; font-size: .9em; margin: .5rem 0; }
+.controls { align-items: flex-end; }
+.consent { display: flex; gap: .4rem; align-items: center; font-size: .9em; }
+#answer { white-space: pre-wrap; word-break: break-word; border: 1px solid var(--b); border-radius: 8px; padding: .75rem; }
+#stage img { max-height: 280px; }

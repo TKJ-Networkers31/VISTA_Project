@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import dataclasses
 import difflib
 import json
 import math
@@ -219,7 +218,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     settings = Settings.from_env()
     fixtures = load_fixtures(args.fixtures)
     provider = create_provider(settings.ocr_engine)
-    report = {"label": args.label, "machine": machine_info(), "settings": dataclasses.asdict(settings),
+    report = {"label": args.label, "machine": machine_info(), "settings": settings.public_dict(),
               "benchmark": run_benchmark(provider, fixtures, settings, args.runs, args.warmup)}
     args.out.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
